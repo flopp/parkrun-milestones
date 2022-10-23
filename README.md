@@ -1,3 +1,7 @@
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/flopp/go-staticmaps)](https://pkg.go.dev/github.com/flopp/parkrun-milestones)
+[![Go Report Card](https://goreportcard.com/badge/github.com/flopp/parkrun-milestones)](https://goreportcard.com/report/flopp/parkrun-milestones)
+[![License MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/flopp/parkrun-milestones/)
+
 # parkrun-milestones
 
 Try to determine milestone candidates to the next run at a parkrun event.
@@ -41,7 +45,7 @@ A milestone candidate is a runner or volunteer, who will probably have a milesto
 
 Example:
 
-````
+```
 $ ./parkrun-milestones eastville
 +---------------------+------+------+--------+
 | NAME                | RUNS | VOLS | ACTIVE |
