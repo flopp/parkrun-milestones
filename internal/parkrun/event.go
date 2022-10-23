@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/biter777/countries"
 	download "github.com/flopp/parkrun-milestones/internal/download"
 	file "github.com/flopp/parkrun-milestones/internal/file"
 )
@@ -18,14 +19,42 @@ type Event struct {
 	CountryUrl string
 }
 
-func AllEvents() ([]*Event, error) {
-	eventList := make([]*Event, 0)
+var byTLD map[string]string = nil
 
-	if err := download.DownloadFile("https://images.parkrun.com/events.json", ".data/events.json", MaxFileAge); err != nil {
+func LookupCountry(url string) (string, error) {
+	pattern := regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
+	match := pattern.FindStringSubmatch(url)
+	if match == nil {
+		return "", fmt.Errorf("cannot extract TLD from %s", url)
+	}
+	tld := match[1]
+
+	if len(byTLD) == 0 {
+		byTLD = make(map[string]string)
+		for _, countryCode := range countries.All() {
+			byTLD[countryCode.Domain().String()] = countryCode.String()
+			fmt.Printf("%s -> %s\n", countryCode.Domain().String(), countryCode.String())
+		}
+	}
+
+	country, ok := byTLD[tld]
+	if !ok {
+		return "", fmt.Errorf("cannot determine country for %s (TLD=%s)", url, tld)
+	}
+	return country, nil
+}
+
+func AllEvents() ([]*Event, error) {
+	filePath, err := CachePath("events.json")
+	if err != nil {
 		return nil, err
 	}
 
-	buf, err := file.ReadFile(".data/events.json")
+	if err := download.DownloadFile("https://images.parkrun.com/events.json", filePath, MaxFileAge); err != nil {
+		return nil, err
+	}
+
+	buf, err := file.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +93,7 @@ func AllEvents() ([]*Event, error) {
 		return nil, fmt.Errorf("cannot get 'events/features' from 'events.json")
 	}
 
+	eventList := make([]*Event, 0)
 	features := featuresI.([]interface{})
 	for _, featureI := range features {
 		feature := featureI.(map[string]interface{})
@@ -120,7 +150,10 @@ func LookupEvent(eventId string) (*Event, error) {
 
 func (event *Event) getNumberOfRuns() (uint64, error) {
 	url := fmt.Sprintf("https://%s/%s/results/eventhistory/", event.CountryUrl, event.Id)
-	filePath := fmt.Sprintf(".data/%s/%s/eventhistory", event.CountryUrl, event.Id)
+	filePath, err := CachePath("%s/%s/eventhistory", event.CountryUrl, event.Id)
+	if err != nil {
+		return 0, err
+	}
 	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
 		return 0, err
 	}
@@ -141,7 +174,7 @@ func (event *Event) getNumberOfRuns() (uint64, error) {
 		return 0, err
 	}
 	if count < 0 {
-		return 0, fmt.Errorf("%s: invalid number of runs: %s", match[1])
+		return 0, fmt.Errorf("%s: invalid number of runs: %s", event.Id, match[1])
 	}
 
 	return uint64(count), nil
@@ -149,7 +182,10 @@ func (event *Event) getNumberOfRuns() (uint64, error) {
 
 func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[string]*Parkrunner) (map[string]*Parkrunner, error) {
 	url := fmt.Sprintf("https://%s/%s/results/%d/", event.CountryUrl, event.Id, runIndex)
-	filePath := fmt.Sprintf(".data/%s/%s/%d", event.CountryUrl, event.Id, runIndex)
+	filePath, err := CachePath("%s/%s/%d", event.CountryUrl, event.Id, runIndex)
+	if err != nil {
+		return parkrunners, err
+	}
 	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
 		return parkrunners, err
 	}

@@ -50,7 +50,10 @@ func (parkrunner *Parkrunner) fetchMissingStats() error {
 	// fmt.Printf("%s (%s) only occured as a volunteer => fetching personal stats\n", parkrunner.Name, parkrunner.Id)
 
 	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", parkrunner.Id)
-	filePath := fmt.Sprintf(".data/parkrunner/%s", parkrunner.Id)
+	filePath, err := CachePath("parkrunner/%s", parkrunner.Id)
+	if err != nil {
+		return err
+	}
 	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
 		return err
 	}

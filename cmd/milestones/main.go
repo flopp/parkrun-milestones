@@ -26,9 +26,13 @@ func listEvents() {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Event Id", "Event Name"})
+	t.AppendHeader(table.Row{"Event Id", "Event Name", "Country"})
 	for _, event := range eventList {
-		t.AppendRow([]interface{}{event.Id, event.Name})
+		country, err := parkrun.LookupCountry(event.CountryUrl)
+		if err != nil {
+			panic(err)
+		}
+		t.AppendRow([]interface{}{event.Id, event.Name, country})
 	}
 	t.Render()
 }
