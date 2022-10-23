@@ -28,13 +28,12 @@ func (parkrunner Parkrunner) IsMilstoneCandidate() bool {
 func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, runs int64, vols int64, runIndex uint64) (map[string]*Parkrunner, error) {
 	if parkrunner, ok := parkrunners[id]; ok {
 		parkrunner.Active[runIndex] = true
-		if runs != -1 && vols != -1 {
-			if parkrunner.Runs == -1 && parkrunner.Vols == -1 {
-				parkrunner.Runs = runs
-				parkrunner.Vols = vols
-			} else if int64(runs) != parkrunner.Runs || int64(vols) != parkrunner.Vols {
-				return parkrunners, fmt.Errorf("inconsistent %s/%s runs=%d/%d vols=%d/%d", name, id, runs, parkrunner.Runs, vols, parkrunner.Vols)
-			}
+
+		if runs > parkrunner.Runs {
+			parkrunner.Runs = runs
+		}
+		if vols > parkrunner.Vols {
+			parkrunner.Vols = vols
 		}
 	} else {
 		parkrunners[id] = &Parkrunner{id, name, runs, vols, map[uint64]bool{runIndex: true}}
@@ -46,8 +45,6 @@ func (parkrunner *Parkrunner) fetchMissingStats() error {
 	if parkrunner.Runs >= 0 && parkrunner.Vols >= 0 {
 		return nil
 	}
-
-	// fmt.Printf("%s (%s) only occured as a volunteer => fetching personal stats\n", parkrunner.Name, parkrunner.Id)
 
 	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", parkrunner.Id)
 	filePath, err := CachePath("parkrunner/%s", parkrunner.Id)

@@ -17,11 +17,12 @@ type Event struct {
 	Id         string
 	Name       string
 	CountryUrl string
+	Country    string
 }
 
 var byTLD map[string]string = nil
 
-func LookupCountry(url string) (string, error) {
+func lookupCountry(url string) (string, error) {
 	pattern := regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
 	match := pattern.FindStringSubmatch(url)
 	if match == nil {
@@ -33,7 +34,6 @@ func LookupCountry(url string) (string, error) {
 		byTLD = make(map[string]string)
 		for _, countryCode := range countries.All() {
 			byTLD[countryCode.Domain().String()] = countryCode.String()
-			fmt.Printf("%s -> %s\n", countryCode.Domain().String(), countryCode.String())
 		}
 	}
 
@@ -124,7 +124,12 @@ func AllEvents() ([]*Event, error) {
 			return nil, fmt.Errorf("cannot get URL of contry '%s'", countryCode)
 		}
 
-		eventList = append(eventList, &Event{eventId, eventName, countryUrl})
+		country, err := lookupCountry(countryUrl)
+		if err != nil {
+			country = "<UNKNOWN>"
+		}
+
+		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country})
 	}
 
 	sort.Slice(eventList, func(i, j int) bool {
