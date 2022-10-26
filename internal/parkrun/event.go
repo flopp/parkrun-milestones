@@ -16,6 +16,7 @@ type Event struct {
 	Name       string
 	CountryUrl string
 	Country    string
+	LastRun    int64
 }
 
 var byTLD map[string]string = nil
@@ -118,7 +119,7 @@ func AllEvents() ([]*Event, error) {
 			country = "<UNKNOWN>"
 		}
 
-		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country})
+		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country, -1})
 	}
 
 	sort.Slice(eventList, func(i, j int) bool {
@@ -214,10 +215,10 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	if err != nil {
 		return nil, 0, err
 	}
-	fmt.Printf("Latest run at %s: #%d\n", event.Name, numberOfRuns)
 	if numberOfRuns == 0 {
 		return nil, 0, fmt.Errorf("%s: no runs", event.Id)
 	}
+	event.LastRun = int64(numberOfRuns)
 
 	toIndex := numberOfRuns
 	fromIndex := uint64(1)
@@ -228,7 +229,6 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	parkrunners := make(map[string]*Parkrunner)
 
 	for index := fromIndex; index <= toIndex; index += 1 {
-		fmt.Printf("-- Examining run #%d\n", index)
 		if parkrunners, err = event.getParkrunnersFromRun(index, parkrunners); err != nil {
 			return nil, 0, err
 		}

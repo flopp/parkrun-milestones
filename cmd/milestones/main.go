@@ -61,6 +61,7 @@ func main() {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
+	t.SetTitle(fmt.Sprintf("Expected Milestones at %s #%d", event.Name, event.LastRun+1))
 	t.AppendHeader(table.Row{"Name", "Runs", "Vols", "Active"})
 	for _, parkrunner := range parkrunners {
 		if parkrunner.IsMilstoneCandidate() {
