@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-
-	download "github.com/flopp/parkrun-milestones/internal/download"
-	file "github.com/flopp/parkrun-milestones/internal/file"
 )
 
 type Parkrunner struct {
@@ -41,28 +38,23 @@ func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string
 	return parkrunners, nil
 }
 
+var (
+	patternR0 = regexp.MustCompile(`No results have been recorded yet for this parkrunner`)
+	patternR  = regexp.MustCompile(`<h3>(\d+) parkruns? total</h3>`)
+	patternV  = regexp.MustCompile(`<strong>Total Credits</strong></td><td><strong>(\d+)</strong>`)
+)
+
 func (parkrunner *Parkrunner) fetchMissingStats() error {
 	if parkrunner.Runs >= 0 && parkrunner.Vols >= 0 {
 		return nil
 	}
 
 	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", parkrunner.Id)
-	filePath, err := CachePath("parkrunner/%s", parkrunner.Id)
+	fileName := fmt.Sprintf("parkrunner/%s", parkrunner.Id)
+	buf, err := DownloadAndRead(url, fileName)
 	if err != nil {
 		return err
 	}
-	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
-		return err
-	}
-
-	buf, err := file.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	patternR0 := regexp.MustCompile(`No results have been recorded yet for this parkrunner`)
-	patternR := regexp.MustCompile(`<h3>(\d+) parkruns? total</h3>`)
-	patternV := regexp.MustCompile(`<strong>Total Credits</strong></td><td><strong>(\d+)</strong>`)
 
 	r := 0
 	matchR := patternR.FindStringSubmatch(buf)

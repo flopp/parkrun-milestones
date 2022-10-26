@@ -9,8 +9,6 @@ import (
 	"strconv"
 
 	"github.com/biter777/countries"
-	download "github.com/flopp/parkrun-milestones/internal/download"
-	file "github.com/flopp/parkrun-milestones/internal/file"
 )
 
 type Event struct {
@@ -21,10 +19,10 @@ type Event struct {
 }
 
 var byTLD map[string]string = nil
+var patternCountryUrl = regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
 
 func lookupCountry(url string) (string, error) {
-	pattern := regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
-	match := pattern.FindStringSubmatch(url)
+	match := patternCountryUrl.FindStringSubmatch(url)
 	if match == nil {
 		return "", fmt.Errorf("cannot extract TLD from %s", url)
 	}
@@ -45,16 +43,7 @@ func lookupCountry(url string) (string, error) {
 }
 
 func AllEvents() ([]*Event, error) {
-	filePath, err := CachePath("events.json")
-	if err != nil {
-		return nil, err
-	}
-
-	if err := download.DownloadFile("https://images.parkrun.com/events.json", filePath, MaxFileAge); err != nil {
-		return nil, err
-	}
-
-	buf, err := file.ReadFile(filePath)
+	buf, err := DownloadAndRead("https://images.parkrun.com/events.json", "events.json")
 	if err != nil {
 		return nil, err
 	}
@@ -153,23 +142,17 @@ func LookupEvent(eventId string) (*Event, error) {
 	return nil, fmt.Errorf("cannot find event '%s'", eventId)
 }
 
+var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
+
 func (event *Event) getNumberOfRuns() (uint64, error) {
 	url := fmt.Sprintf("https://%s/%s/results/eventhistory/", event.CountryUrl, event.Id)
-	filePath, err := CachePath("%s/%s/eventhistory", event.CountryUrl, event.Id)
-	if err != nil {
-		return 0, err
-	}
-	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
-		return 0, err
-	}
-
-	buf, err := file.ReadFile(filePath)
+	fileName := fmt.Sprintf("%s/%s/eventhistory", event.CountryUrl, event.Id)
+	buf, err := DownloadAndRead(url, fileName)
 	if err != nil {
 		return 0, err
 	}
 
-	pattern := regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
-	match := pattern.FindStringSubmatch(buf)
+	match := patternNumberOfRuns.FindStringSubmatch(buf)
 	if match == nil {
 		return 0, fmt.Errorf("%s: cannot find number of runs", event.Id)
 	}
@@ -185,23 +168,18 @@ func (event *Event) getNumberOfRuns() (uint64, error) {
 	return uint64(count), nil
 }
 
+var patternParkrunnerRow = regexp.MustCompile(`<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="[^"]*" data-club="[^"]*" data-gender="[^"]*" data-position="[^"]*" data-runs="([^"]*)" data-vols="([^"]*)" data-agegrade="[^"]*" data-achievement="[^"]*"><td class="Results-table-td Results-table-td--position">[^<]*</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
+var patternVolunteer = regexp.MustCompile(`<a href='\./athletehistory/\?athleteNumber=(\d+)'>([^<]+)</a>`)
+
 func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[string]*Parkrunner) (map[string]*Parkrunner, error) {
 	url := fmt.Sprintf("https://%s/%s/results/%d/", event.CountryUrl, event.Id, runIndex)
-	filePath, err := CachePath("%s/%s/%d", event.CountryUrl, event.Id, runIndex)
-	if err != nil {
-		return parkrunners, err
-	}
-	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
-		return parkrunners, err
-	}
-
-	buf, err := file.ReadFile(filePath)
+	fileName := fmt.Sprintf("%s/%s/%d", event.CountryUrl, event.Id, runIndex)
+	buf, err := DownloadAndRead(url, fileName)
 	if err != nil {
 		return parkrunners, err
 	}
 
-	pattern := regexp.MustCompile(`<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="[^"]*" data-club="[^"]*" data-gender="[^"]*" data-position="[^"]*" data-runs="([^"]*)" data-vols="([^"]*)" data-agegrade="[^"]*" data-achievement="[^"]*"><td class="Results-table-td Results-table-td--position">[^<]*</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
-	matches := pattern.FindAllStringSubmatch(buf, -1)
+	matches := patternParkrunnerRow.FindAllStringSubmatch(buf, -1)
 	for _, match := range matches {
 		name := html.UnescapeString(match[1])
 		runs, err := strconv.Atoi(match[2])
@@ -219,8 +197,7 @@ func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[strin
 		}
 	}
 
-	patternV := regexp.MustCompile(`<a href='\./athletehistory/\?athleteNumber=(\d+)'>([^<]+)</a>`)
-	matchesV := patternV.FindAllStringSubmatch(buf, -1)
+	matchesV := patternVolunteer.FindAllStringSubmatch(buf, -1)
 	for _, match := range matchesV {
 		id := match[1]
 		name := html.UnescapeString(match[2])
