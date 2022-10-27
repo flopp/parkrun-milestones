@@ -16,7 +16,7 @@ func DownloadFile(url string, filePath string, maxAge time.Duration) error {
 		return nil
 	}
 
-	fmt.Printf("-- Downloading %s ==> %s\n", url, filePath)
+	//fmt.Printf("-- Downloading %s ==> %s\n", url, filePath)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -44,6 +44,7 @@ func main() {
 	}
 
 	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Event Id", "Event Name", "Country"})
 	for _, event := range eventList {
