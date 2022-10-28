@@ -160,7 +160,8 @@ func (event *Event) getNumberOfRuns() (uint64, error) {
 
 	match := patternNumberOfRuns.FindStringSubmatch(buf)
 	if match == nil {
-		return 0, fmt.Errorf("%s: cannot find number of runs", event.Id)
+		// return 0, fmt.Errorf("%s: cannot find number of runs", event.Id)
+		return 0, nil
 	}
 
 	count, err := strconv.Atoi(match[1])
@@ -223,7 +224,7 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 		return nil, 0, err
 	}
 	if numberOfRuns == 0 {
-		return nil, 0, fmt.Errorf("%s: no runs", event.Id)
+		return nil, 0, nil
 	}
 	event.LastRun = int64(numberOfRuns)
 
