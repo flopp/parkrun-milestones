@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/biter777/countries"
 )
@@ -143,6 +144,10 @@ func LookupEvent(eventId string) (*Event, error) {
 	return nil, fmt.Errorf("cannot find event '%s'", eventId)
 }
 
+func (event *Event) IsJuniorParkrun() bool {
+	return strings.HasSuffix(event.Id, "-juniors")
+}
+
 var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
 
 func (event *Event) getNumberOfRuns() (uint64, error) {
@@ -180,6 +185,8 @@ func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[strin
 		return parkrunners, err
 	}
 
+	junior := event.IsJuniorParkrun()
+
 	matches := patternParkrunnerRow.FindAllStringSubmatch(buf, -1)
 	for _, match := range matches {
 		name := html.UnescapeString(match[1])
@@ -193,8 +200,10 @@ func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[strin
 		}
 		id := match[4]
 
-		if parkrunners, err = updateParkrunner(parkrunners, id, name, int64(runs), int64(vols), runIndex); err != nil {
-			return parkrunners, err
+		if junior {
+			parkrunners = updateParkrunner(parkrunners, id, name, -1, int64(runs), int64(vols), runIndex)
+		} else {
+			parkrunners = updateParkrunner(parkrunners, id, name, int64(runs), -1, int64(vols), runIndex)
 		}
 	}
 
@@ -203,9 +212,7 @@ func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[strin
 		id := match[1]
 		name := html.UnescapeString(match[2])
 
-		if parkrunners, err = updateParkrunner(parkrunners, id, name, -1, -1, runIndex); err != nil {
-			return parkrunners, err
-		}
+		parkrunners = updateParkrunner(parkrunners, id, name, -1, -1, -1, runIndex)
 	}
 	return parkrunners, nil
 }

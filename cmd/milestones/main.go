@@ -82,21 +82,31 @@ func main() {
 			panic(err)
 		}
 
+		junior := event.IsJuniorParkrun()
+
 		t := table.NewWriter()
 		t.SetStyle(table.StyleLight)
 		t.SetOutputMirror(os.Stdout)
 		t.SetTitle(fmt.Sprintf("Expected Milestones at\n%s\nRun #%d", event.Name, event.LastRun+1))
 		t.AppendHeader(table.Row{"Name", "Runs", "Vols", "Active"})
-		for _, parkrunner := range parkrunners {
-			if parkrunner.IsMilstoneCandidate() {
-				t.AppendRow([]interface{}{parkrunner.Name, formatMilestone(parkrunner.Runs), formatMilestone(parkrunner.Vols), fmt.Sprintf("%d/%d", len(parkrunner.Active), examinedRuns)})
+		if junior {
+			for _, parkrunner := range parkrunners {
+				if parkrun.Milestone(parkrunner.JuniorRuns+1) || parkrun.Milestone(parkrunner.Vols+1) {
+					t.AppendRow([]interface{}{parkrunner.Name, formatMilestone(parkrunner.JuniorRuns), formatMilestone(parkrunner.Vols), fmt.Sprintf("%d/%d", len(parkrunner.Active), examinedRuns)})
+				}
+			}
+		} else {
+			for _, parkrunner := range parkrunners {
+				if parkrun.Milestone(parkrunner.Runs+1) || parkrun.Milestone(parkrunner.Vols+1) {
+					t.AppendRow([]interface{}{parkrunner.Name, formatMilestone(parkrunner.Runs), formatMilestone(parkrunner.Vols), fmt.Sprintf("%d/%d", len(parkrunner.Active), examinedRuns)})
+				}
 			}
 		}
 		t.SetColumnConfigs([]table.ColumnConfig{
 			{Number: 1, WidthMin: 30, AlignHeader: text.AlignLeft},
 			{Number: 2, WidthMin: 4, Align: text.AlignRight, AlignHeader: text.AlignLeft},
 			{Number: 3, WidthMin: 4, Align: text.AlignRight, AlignHeader: text.AlignLeft},
-			{Number: 4, WidthMin: 5, AlignHeader: text.AlignLeft},
+			{Number: 4, WidthMin: 5, Align: text.AlignRight, AlignHeader: text.AlignLeft},
 		})
 		t.Render()
 		fmt.Println()
