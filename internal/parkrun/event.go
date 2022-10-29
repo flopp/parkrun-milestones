@@ -236,6 +236,7 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 
 	parkrunners := make(map[string]*Parkrunner)
 
+	fmt.Printf("-- Fetching the latest %d result lists...\n", 1+toIndex-fromIndex)
 	for index := fromIndex; index <= toIndex; index += 1 {
 		if parkrunners, err = event.getParkrunnersFromRun(index, parkrunners); err != nil {
 			return nil, 0, err
@@ -243,6 +244,16 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	}
 
 	activeLimit := int64(minActiveRatio * (float64(1 + toIndex - fromIndex)))
+
+	updatesNeeded := 0
+	for _, parkrunner := range parkrunners {
+		if len(parkrunner.Active) >= int(activeLimit) {
+			if parkrunner.needsUpdate() {
+				updatesNeeded += 1
+			}
+		}
+	}
+	fmt.Printf("-- Updating %d incomplete parkrunners...\n", updatesNeeded)
 
 	activeParkrunners := make([]*Parkrunner, 0)
 	for _, parkrunner := range parkrunners {

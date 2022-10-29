@@ -86,8 +86,15 @@ func (parkrunner *Parkrunner) extractRunCount(buf string) (int, int, error) {
 	return 0, 0, fmt.Errorf("cannot find running stats for %s", parkrunner.Id)
 }
 
-func (parkrunner *Parkrunner) fetchMissingStats() error {
+func (parkrunner *Parkrunner) needsUpdate() bool {
 	if parkrunner.Runs >= 0 || parkrunner.JuniorRuns >= 0 || parkrunner.Vols >= 0 {
+		return false
+	}
+	return true
+}
+
+func (parkrunner *Parkrunner) fetchMissingStats() error {
+	if !parkrunner.needsUpdate() {
 		return nil
 	}
 
