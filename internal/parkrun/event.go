@@ -3,11 +3,11 @@ package parkrun
 import (
 	"encoding/json"
 	"fmt"
-	"html"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/biter777/countries"
 )
@@ -17,7 +17,8 @@ type Event struct {
 	Name       string
 	CountryUrl string
 	Country    string
-	LastRun    int64
+	IsComplete bool
+	Runs       []*Run
 }
 
 var byTLD map[string]string = nil
@@ -45,7 +46,7 @@ func lookupCountry(url string) (string, error) {
 }
 
 func AllEvents() ([]*Event, error) {
-	buf, err := DownloadAndRead("https://images.parkrun.com/events.json", "events.json")
+	buf, _, err := DownloadAndRead("https://images.parkrun.com/events.json", "events.json")
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +121,7 @@ func AllEvents() ([]*Event, error) {
 			country = "<UNKNOWN>"
 		}
 
-		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country, -1})
+		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country, false, nil})
 	}
 
 	sort.Slice(eventList, func(i, j int) bool {
@@ -149,72 +150,100 @@ func (event *Event) IsJuniorParkrun() bool {
 }
 
 var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
+var patternRunRow = regexp.MustCompile(`<tr class="Results-table-row" data-parkrun="(\d+)" data-date="(\d+/\d+/\d+)" data-finishers="(\d+)" data-volunteers="(\d+)" data-male="([^"]*)" data-female="([^"]*)" data-maletime="(\d*)" data-femaletime="(\d*)">`)
 
-func (event *Event) getNumberOfRuns() (uint64, error) {
+func (event *Event) Complete() error {
+	if event.IsComplete {
+		return nil
+	}
+
 	url := fmt.Sprintf("https://%s/%s/results/eventhistory/", event.CountryUrl, event.Id)
 	fileName := fmt.Sprintf("%s/%s/eventhistory", event.CountryUrl, event.Id)
-	buf, err := DownloadAndRead(url, fileName)
+	buf, _, err := DownloadAndRead(url, fileName)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	match := patternNumberOfRuns.FindStringSubmatch(buf)
 	if match == nil {
-		// return 0, fmt.Errorf("%s: cannot find number of runs", event.Id)
-		return 0, nil
+		event.IsComplete = true
+		return nil
 	}
 
 	count, err := strconv.Atoi(match[1])
 	if err != nil {
-		return 0, err
+		return err
 	}
 	if count < 0 {
-		return 0, fmt.Errorf("%s: invalid number of runs: %s", event.Id, match[1])
+		return fmt.Errorf("%s: invalid number of runs: %s", event.Id, match[1])
 	}
 
-	return uint64(count), nil
+	event.Runs = make([]*Run, count)
+	matches := patternRunRow.FindAllStringSubmatch(buf, -1)
+	for _, match := range matches {
+		index, err := strconv.Atoi(match[1])
+		if err != nil {
+			return err
+		}
+		if index <= 0 || index > count {
+			return fmt.Errorf("%s: invalid run index: %s", event.Id, match[1])
+		}
+
+		date, err := time.Parse("02/01/2006", match[2])
+		if err != nil {
+			return fmt.Errorf("%s: invalid date: %s (%v)", event.Id, match[2], err)
+		}
+
+		if event.Runs[index-1] != nil {
+			return fmt.Errorf("%s: duplicate run #%d", event.Id, index)
+		}
+		event.Runs[index-1] = CreateRun(event, uint64(index), date)
+	}
+
+	for index, run := range event.Runs {
+		if run == nil {
+			return fmt.Errorf("%s: missing run #%d", event.Id, index+1)
+		}
+	}
+
+	event.IsComplete = true
+	return nil
 }
 
-var patternParkrunnerRow = regexp.MustCompile(`<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="[^"]*" data-club="[^"]*" data-gender="[^"]*" data-position="[^"]*" data-runs="([^"]*)" data-vols="([^"]*)" data-agegrade="[^"]*" data-achievement="[^"]*"><td class="Results-table-td Results-table-td--position">[^<]*</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
-var patternVolunteer = regexp.MustCompile(`<a href='\./athletehistory/\?athleteNumber=(\d+)'>([^<]+)</a>`)
+func (event *Event) getNumberOfRuns() (uint64, error) {
+	err := event.Complete()
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(len(event.Runs)), nil
+}
 
 func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[string]*Parkrunner) (map[string]*Parkrunner, error) {
-	url := fmt.Sprintf("https://%s/%s/results/%d/", event.CountryUrl, event.Id, runIndex)
-	fileName := fmt.Sprintf("%s/%s/%d", event.CountryUrl, event.Id, runIndex)
-	buf, err := DownloadAndRead(url, fileName)
+	if runIndex < 1 || runIndex > uint64(len(event.Runs)) {
+		return parkrunners, fmt.Errorf("%s: bad run #%d", event.Id, runIndex)
+	}
+
+	run := event.Runs[runIndex-1]
+	err := run.Complete()
 	if err != nil {
 		return parkrunners, err
 	}
 
 	junior := event.IsJuniorParkrun()
 
-	matches := patternParkrunnerRow.FindAllStringSubmatch(buf, -1)
-	for _, match := range matches {
-		name := html.UnescapeString(match[1])
-		runs, err := strconv.Atoi(match[2])
-		if err != nil {
-			return parkrunners, err
-		}
-		vols, err := strconv.Atoi(match[3])
-		if err != nil {
-			return parkrunners, err
-		}
-		id := match[4]
-
+	for _, participant := range run.Runners {
 		if junior {
-			parkrunners = updateParkrunner(parkrunners, id, name, -1, int64(runs), int64(vols), runIndex)
+			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, -1, participant.Runs, participant.Vols, runIndex)
 		} else {
-			parkrunners = updateParkrunner(parkrunners, id, name, int64(runs), -1, int64(vols), runIndex)
+			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, participant.Runs, -1, participant.Vols, runIndex)
 		}
 	}
 
-	matchesV := patternVolunteer.FindAllStringSubmatch(buf, -1)
-	for _, match := range matchesV {
-		id := match[1]
-		name := html.UnescapeString(match[2])
-
-		parkrunners = updateParkrunner(parkrunners, id, name, -1, -1, -1, runIndex)
+	for _, participant := range run.Volunteers {
+		parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, -1, -1, -1, runIndex)
 	}
+
 	return parkrunners, nil
 }
 
@@ -226,7 +255,6 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	if numberOfRuns == 0 {
 		return nil, 0, nil
 	}
-	event.LastRun = int64(numberOfRuns)
 
 	toIndex := numberOfRuns
 	fromIndex := uint64(1)
@@ -244,11 +272,11 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	}
 
 	activeLimit := int64(minActiveRatio * (float64(1 + toIndex - fromIndex)))
-
+	lastRunDate := event.Runs[len(event.Runs)-1].Time
 	updatesNeeded := 0
 	for _, parkrunner := range parkrunners {
 		if len(parkrunner.Active) >= int(activeLimit) {
-			if parkrunner.needsUpdate() {
+			if parkrunner.NeedsUpdate() {
 				updatesNeeded += 1
 			}
 		}
@@ -258,7 +286,7 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 	activeParkrunners := make([]*Parkrunner, 0)
 	for _, parkrunner := range parkrunners {
 		if len(parkrunner.Active) >= int(activeLimit) {
-			if err = parkrunner.fetchMissingStats(); err != nil {
+			if err = parkrunner.FetchMissingStats(lastRunDate); err != nil {
 				return nil, 0, err
 			}
 			activeParkrunners = append(activeParkrunners, parkrunner)

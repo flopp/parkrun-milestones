@@ -11,13 +11,7 @@ import (
 	file "github.com/flopp/parkrun-milestones/internal/file"
 )
 
-func DownloadFile(url string, filePath string, maxAge time.Duration) error {
-	if mtime, err := file.GetMtime(filePath); err == nil && mtime.After(time.Now().Add(-maxAge)) {
-		return nil
-	}
-
-	//fmt.Printf("-- Downloading %s ==> %s\n", url, filePath)
-
+func download(url string, filePath string) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -47,4 +41,23 @@ func DownloadFile(url string, filePath string, maxAge time.Duration) error {
 
 	_, err = io.Copy(out, response.Body)
 	return err
+}
+
+func DownloadFileMaxMtime(url string, filePath string, maxMtime time.Time) error {
+	mtime, err := file.GetMtime(filePath)
+	if err == nil {
+		if mtime.After(maxMtime) {
+			return nil
+		}
+	}
+
+	return download(url, filePath)
+}
+
+func DownloadFile(url string, filePath string, maxAge time.Duration) error {
+	if mtime, err := file.GetMtime(filePath); err == nil && mtime.After(time.Now().Add(-maxAge)) {
+		return nil
+	}
+
+	return download(url, filePath)
 }

@@ -105,7 +105,7 @@ func main() {
 		t := table.NewWriter()
 		t.SetStyle(table.StyleLight)
 		t.SetOutputMirror(os.Stdout)
-		t.SetTitle(fmt.Sprintf("Expected Milestones at\n%s\nRun #%d", event.Name, event.LastRun+1))
+		t.SetTitle(fmt.Sprintf("Expected Milestones at\n%s\nRun #%d", event.Name, len(event.Runs)+1))
 		t.AppendHeader(table.Row{"Name", "Runs", "Vols", "Active"})
 		if junior {
 			for _, parkrunner := range parkrunners {

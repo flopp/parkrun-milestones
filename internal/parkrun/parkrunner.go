@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 type Parkrunner struct {
 	Id         string
 	Name       string
+	DataTime   time.Time
 	Runs       int64
 	JuniorRuns int64
 	Vols       int64
@@ -19,22 +21,12 @@ func Milestone(number int64) bool {
 	return number == 25 || number == 50 || number == 100 || number == 250 || number == 500
 }
 
-func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
+func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
 	if parkrunner, ok := parkrunners[id]; ok {
 		parkrunner.Active[runIndex] = true
-
-		if runs > parkrunner.Runs {
-			parkrunner.Runs = runs
-		}
-		if juniorRuns > parkrunner.JuniorRuns {
-			parkrunner.JuniorRuns = juniorRuns
-		}
-		if vols > parkrunner.Vols {
-			parkrunner.Vols = vols
-		}
-
+		parkrunner.update(dataTime, runs, juniorRuns, vols)
 	} else {
-		parkrunners[id] = &Parkrunner{id, name, runs, juniorRuns, vols, map[uint64]bool{runIndex: true}}
+		parkrunners[id] = &Parkrunner{id, name, dataTime, runs, juniorRuns, vols, map[uint64]bool{runIndex: true}}
 	}
 	return parkrunners
 }
@@ -86,21 +78,43 @@ func (parkrunner *Parkrunner) extractRunCount(buf string) (int, int, error) {
 	return 0, 0, fmt.Errorf("cannot find running stats for %s", parkrunner.Id)
 }
 
-func (parkrunner *Parkrunner) needsUpdate() bool {
+func (parkrunner *Parkrunner) NeedsUpdate() bool {
+	// always update old data
+	if parkrunner.Id == "" {
+		return false
+	}
+	if parkrunner.DataTime.Add(MaxFileAge).Before(time.Now()) {
+		return true
+	}
 	if parkrunner.Runs >= 0 || parkrunner.JuniorRuns >= 0 || parkrunner.Vols >= 0 {
 		return false
 	}
 	return true
 }
 
-func (parkrunner *Parkrunner) fetchMissingStats() error {
-	if !parkrunner.needsUpdate() {
+func (parkrunner *Parkrunner) update(dataTime time.Time, runs int64, juniorRuns int64, vols int64) {
+	if runs > parkrunner.Runs {
+		parkrunner.Runs = runs
+	}
+	if juniorRuns > parkrunner.JuniorRuns {
+		parkrunner.JuniorRuns = juniorRuns
+	}
+	if vols > parkrunner.Vols {
+		parkrunner.Vols = vols
+	}
+	if dataTime.After(parkrunner.DataTime) {
+		parkrunner.DataTime = dataTime
+	}
+}
+
+func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
+	if !parkrunner.NeedsUpdate() {
 		return nil
 	}
 
 	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", parkrunner.Id)
 	fileName := fmt.Sprintf("parkrunner/%s", parkrunner.Id)
-	buf, err := DownloadAndRead(url, fileName)
+	buf, dataTime, err := DownloadAndReadMaxMtime(url, fileName, lastRunTime.Add(24*time.Hour))
 	if err != nil {
 		return err
 	}
@@ -112,18 +126,14 @@ func (parkrunner *Parkrunner) fetchMissingStats() error {
 
 	v := 0
 	matchV := patternV.FindStringSubmatch(buf)
-	if matchV == nil {
-		return fmt.Errorf("cannot find volunteering stats for %s", parkrunner.Id)
-	} else {
+	if matchV != nil {
 		v, err = strconv.Atoi(matchV[1])
 		if err != nil {
 			return err
 		}
 	}
 
-	parkrunner.Runs = int64(r)
-	parkrunner.JuniorRuns = int64(j)
-	parkrunner.Vols = int64(v)
+	parkrunner.update(dataTime, int64(r), int64(j), int64(v))
 
 	return nil
 }
