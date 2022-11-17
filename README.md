@@ -64,3 +64,27 @@ $ ./parkrun-milestones eastville
 │ Rosie BURROWS                  │  *24 │  114 │ 5/10   │
 └────────────────────────────────┴──────┴──────┴────────┘
 ```
+
+### parkrun-runstats
+Prints the stats of the latest run in list format; suitable for sharing in text-based social media (mastodon, twitter, etc.).
+
+Example:
+
+```
+$ ./parkrun-runstats -fancy bushy
+Bushy parkrun
+#️⃣ 902
+📅 2022-11-12
+🏃 Runners: 1154
+  ⏱ new PB: 108
+  🧳 first visitors: 111
+  ⭐️ new parkrunners: 37
+  🏆 25. run anniversary: 7
+  🏆 50. run anniversary: 6
+  🏆 100. run anniversary: 3
+🦺 Volunteers: 69
+  ⭐️ new volunteers: 6
+  🏆 25. vol. anniversary: 1
+  🏆 100. vol. anniversary: 1
+👀 https://www.parkrun.org.uk/bushy/results/902/
+```
