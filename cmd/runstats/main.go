@@ -102,7 +102,7 @@ func printFancy(event *parkrun.Event, run *parkrun.Run, r500, r250, r100, r50, r
 	pi(int(run.Index), "#️⃣", "")
 	ps(run.Time.Format("2006-01-02"), "📅", "")
 	pi(len(run.Runners), "🏃", "Runners")
-	pi2(pb, "⏱", "new PB")
+	pi2(pb, "⏱️", "new PB")
 	pi2(firstEvent, "🧳", "first visitors")
 	pi2(r1, "⭐️", "new parkrunners")
 	pi2(r25, "🏆", "25. run anniversary")
