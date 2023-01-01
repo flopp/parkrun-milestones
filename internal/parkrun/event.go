@@ -21,6 +21,10 @@ type Event struct {
 	Runs       []*Run
 }
 
+func (event Event) NumberOfRuns() int {
+	return len(event.Runs)
+}
+
 var byTLD map[string]string = nil
 var patternCountryUrl = regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
 
@@ -297,4 +301,79 @@ func (event *Event) GetActiveParkrunners(minActiveRatio float64, examineNumberOf
 		return activeParkrunners[i].Name < activeParkrunners[j].Name
 	})
 	return activeParkrunners, (1 + toIndex - fromIndex), nil
+}
+
+type EventStats struct {
+	FirstEvent []*Participant
+	PB         []*Participant
+	R1         []*Participant
+	R25        []*Participant
+	R50        []*Participant
+	R100       []*Participant
+	R250       []*Participant
+	R500       []*Participant
+	V1         []*Participant
+	V25        []*Participant
+	V50        []*Participant
+	V100       []*Participant
+	V250       []*Participant
+	V500       []*Participant
+}
+
+func (event *Event) GetStats() *EventStats {
+	if len(event.Runs) == 0 {
+		fmt.Printf("No runs at %s\n", event.Name)
+		return nil
+	}
+
+	run := event.Runs[len(event.Runs)-1]
+	if err := run.Complete(); err != nil {
+		panic(err)
+	}
+
+	stats := EventStats{}
+	for _, participant := range run.Runners {
+		if participant.Achievement == AchievementFirst {
+			if participant.Runs == 1 {
+				stats.R1 = append(stats.R1, participant)
+			} else {
+				stats.FirstEvent = append(stats.FirstEvent, participant)
+			}
+		} else if participant.Achievement == AchievementPB {
+			stats.PB = append(stats.PB, participant)
+		}
+		if participant.Runs == 25 {
+			stats.R25 = append(stats.R25, participant)
+		} else if participant.Runs == 50 {
+			stats.R50 = append(stats.R50, participant)
+		} else if participant.Runs == 100 {
+			stats.R100 = append(stats.R100, participant)
+		} else if participant.Runs == 250 {
+			stats.R250 = append(stats.R250, participant)
+		} else if participant.Runs == 500 {
+			stats.R500 = append(stats.R500, participant)
+		}
+	}
+	for _, participant := range run.Volunteers {
+		parkrunner := &Parkrunner{participant.Id, participant.Name, run.Time, -1, -1, -1, nil}
+		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
+			panic(err)
+		}
+
+		if parkrunner.Vols == 1 {
+			stats.V1 = append(stats.V1, participant)
+		} else if parkrunner.Vols == 25 {
+			stats.V25 = append(stats.V25, participant)
+		} else if parkrunner.Vols == 50 {
+			stats.V50 = append(stats.V50, participant)
+		} else if parkrunner.Vols == 100 {
+			stats.V100 = append(stats.V100, participant)
+		} else if parkrunner.Vols == 250 {
+			stats.V250 = append(stats.V250, participant)
+		} else if parkrunner.Vols == 500 {
+			stats.V500 = append(stats.V500, participant)
+		}
+	}
+
+	return &stats
 }

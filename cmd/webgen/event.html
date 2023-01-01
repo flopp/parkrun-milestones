@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>
+            {{.Event.Name}}
+        </title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+        <style>
+            .sidebar {
+                grid-area: "sidebar";
+                position: sticky;
+                display: inline-block;
+                vertical-align: top;
+                max-height: 100vh;
+                overflow-y: auto;
+                top: 0;
+                bottom: 0;
+            }
+            .main {
+                grid-area: "content";
+            }
+            .wrapper {
+                grid-template-columns: 1fr 3fr;
+                display: grid;
+                grid-template-areas:
+                    "sidebar"
+                    "content";
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <div class="sidebar box has-background-white">
+            <aside class="menu">
+                <p class="menu-label has-text-grey-dark">
+                    parkruns in Deutschland
+                </p>
+                <ul class="menu-list">
+                    {{range .Events}}
+                    {{if eq .Name $.Event.Name}}
+                    <li><a class="is-active" href="{{ .Id }}.html">{{.Name}}</a></li>
+                    {{else}}
+                    <li><a href="{{ .Id }}.html">{{.Name}}</a></li>
+                    {{end}}
+                    {{end}}
+                </ul>
+            </aside>
+        </div>
+            <main class="main">
+                <section class="section">
+                    <h1 class="title">{{.Event.Name}}</h1>
+                    {{if .Run}}
+                    <h2 class="subtitle">Letztes Event</h2>
+                    <table class="table">
+                        <tr><td>Letztes Event:</td><td>{{.Run.Index}}</td></tr>
+                        <tr><td>Datum:</td><td>{{.Run.Time}}</td></tr>
+                        <tr><td>Teilnehmer:</td><td>{{(len .Run.Runners)}}</td></tr>
+                        {{if gt (len .Stats.PB) 0}}<tr><td>- Neue PB:</td><td>{{(len .Stats.PB)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.FirstEvent) 0}}<tr><td>- Neue Besucher:</td><td>{{(len .Stats.FirstEvent)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R1) 0}}<tr><td>- Neue parkrunner:</td><td>{{(len .Stats.R1)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R25) 0}}<tr><td>- R25:</td><td>{{(len .Stats.R25)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R50) 0}}<tr><td>- R50:</td><td>{{(len .Stats.R50)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R100) 0}}<tr><td>- R100:</td><td>{{(len .Stats.R100)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R250) 0}}<tr><td>- R250:</td><td>{{(len .Stats.R250)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.R500) 0}}<tr><td>- R500:</td><td>{{(len .Stats.R500)}}</td></tr>{{end}}
+                        <tr><td>Helfer:</td><td>{{(len .Run.Volunteers)}}</td></tr>
+                        {{if gt (len .Stats.V1) 0}}<tr><td>- Neue Helfer:</td><td>{{(len .Stats.V1)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.V25) 0}}<tr><td>- V25:</td><td>{{(len .Stats.V25)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.V50) 0}}<tr><td>- V50:</td><td>{{(len .Stats.V50)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.V100) 0}}<tr><td>- V100:</td><td>{{(len .Stats.V100)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.V250) 0}}<tr><td>- V250:</td><td>{{(len .Stats.V250)}}</td></tr>{{end}}
+                        {{if gt (len .Stats.V500) 0}}<tr><td>- V500:</td><td>{{(len .Stats.V500)}}</td></tr>{{end}}
+                    </table>
+                    {{end}}
+                    {{if .NextMilestones}}
+                    <h2 class="subtitle">Mögliche Milestones beim nächsten Event</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th><th>Laufen</th><th>Helfen</th><th>Aktivität</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{range .NextMilestones}}
+                            <tr>
+                                <td><a href="https://{{$.Event.CountryUrl}}/parkrunner/{{.Parkrunner.Id}}" target="_blank">{{.Parkrunner.Name}}</a></td>
+                                {{if .NextRun}}<td><strong>{{.Parkrunner.Runs}}</strong></td>{{else}}<td>{{.Parkrunner.Runs}}</td>{{end}}
+                                {{if .NextVol}}<td><strong>{{.Parkrunner.Vols}}</strong></td>{{else}}<td>{{.Parkrunner.Vols}}</td>{{end}}
+                                <td>{{.Active}}</td>
+                            </tr>
+                        {{end}}
+                        </tbody>
+                    </table>
+                    {{end}}
+                </section>
+            </main>
+        </div>
+    </body>
+</html>

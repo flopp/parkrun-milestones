@@ -132,72 +132,27 @@ func main() {
 		if err := event.Complete(); err != nil {
 			panic(err)
 		}
-		if len(event.Runs) == 0 {
-			fmt.Printf("No runs at %s\n", event.Name)
+
+		stats := event.GetStats()
+		if stats == nil {
 			continue
 		}
 
 		run := event.Runs[len(event.Runs)-1]
-		if err := run.Complete(); err != nil {
-			panic(err)
-		}
-
-		firstEvent := 0
-		pb := 0
-		r1 := 0
-		r25 := 0
-		r50 := 0
-		r100 := 0
-		r250 := 0
-		r500 := 0
-		for _, participant := range run.Runners {
-			if participant.Achievement == parkrun.AchievementFirst {
-				if participant.Runs == 1 {
-					r1 += 1
-				} else {
-					firstEvent += 1
-				}
-			} else if participant.Achievement == parkrun.AchievementPB {
-				pb += 1
-			}
-			if participant.Runs == 25 {
-				r25 += 1
-			} else if participant.Runs == 50 {
-				r50 += 1
-			} else if participant.Runs == 100 {
-				r100 += 1
-			} else if participant.Runs == 250 {
-				r250 += 1
-			} else if participant.Runs == 500 {
-				r500 += 1
-			}
-		}
-		v1 := 0
-		v25 := 0
-		v50 := 0
-		v100 := 0
-		v250 := 0
-		v500 := 0
-		for _, participant := range run.Volunteers {
-			parkrunner := &parkrun.Parkrunner{participant.Id, participant.Name, run.Time, -1, -1, -1, nil}
-			if err := parkrunner.FetchMissingStats(run.Time); err != nil {
-				panic(err)
-			}
-
-			if parkrunner.Vols == 1 {
-				v1 += 1
-			} else if parkrunner.Vols == 25 {
-				v25 += 1
-			} else if parkrunner.Vols == 50 {
-				v50 += 1
-			} else if parkrunner.Vols == 100 {
-				v100 += 1
-			} else if parkrunner.Vols == 250 {
-				v250 += 1
-			} else if parkrunner.Vols == 500 {
-				v500 += 1
-			}
-		}
+		firstEvent := len(stats.FirstEvent)
+		pb := len(stats.PB)
+		r1 := len(stats.R1)
+		r25 := len(stats.R25)
+		r50 := len(stats.R50)
+		r100 := len(stats.R100)
+		r250 := len(stats.R250)
+		r500 := len(stats.R500)
+		v1 := len(stats.V1)
+		v25 := len(stats.V25)
+		v50 := len(stats.V50)
+		v100 := len(stats.V100)
+		v250 := len(stats.V250)
+		v500 := len(stats.V500)
 
 		if options.fancy {
 			printFancy(event, run, r500, r250, r100, r50, r25, r1, pb, firstEvent, v500, v250, v100, v50, v25, v1)
