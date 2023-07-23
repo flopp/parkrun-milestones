@@ -198,10 +198,20 @@ func (event *Event) Complete() error {
 			return fmt.Errorf("%s: invalid date: %s (%v)", event.Id, match[2], err)
 		}
 
+		finishers, err := strconv.Atoi(match[3])
+		if err != nil {
+			return err
+		}
+
+		volunteers, err := strconv.Atoi(match[4])
+		if err != nil {
+			return err
+		}
+
 		if event.Runs[index-1] != nil {
 			return fmt.Errorf("%s: duplicate run #%d", event.Id, index)
 		}
-		event.Runs[index-1] = CreateRun(event, uint64(index), date)
+		event.Runs[index-1] = CreateRun(event, uint64(index), date, uint64(finishers), uint64(volunteers))
 	}
 
 	for index, run := range event.Runs {
@@ -238,14 +248,14 @@ func (event *Event) getParkrunnersFromRun(runIndex uint64, parkrunners map[strin
 
 	for _, participant := range run.Runners {
 		if junior {
-			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, -1, participant.Runs, participant.Vols, runIndex)
+			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, participant.AgeGroup, run.DataTime, -1, participant.Runs, participant.Vols, runIndex)
 		} else {
-			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, participant.Runs, -1, participant.Vols, runIndex)
+			parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, participant.AgeGroup, run.DataTime, participant.Runs, -1, participant.Vols, runIndex)
 		}
 	}
 
 	for _, participant := range run.Volunteers {
-		parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, run.DataTime, -1, -1, -1, runIndex)
+		parkrunners = updateParkrunner(parkrunners, participant.Id, participant.Name, participant.AgeGroup, run.DataTime, -1, -1, -1, runIndex)
 	}
 
 	return parkrunners, nil
@@ -355,7 +365,7 @@ func (event *Event) GetStats() *EventStats {
 		}
 	}
 	for _, participant := range run.Volunteers {
-		parkrunner := &Parkrunner{participant.Id, participant.Name, run.Time, -1, -1, -1, nil}
+		parkrunner := &Parkrunner{participant.Id, participant.Name, -1, run.Time, -1, -1, -1, nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
 			panic(err)
 		}

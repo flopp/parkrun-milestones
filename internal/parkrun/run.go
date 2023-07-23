@@ -5,6 +5,7 @@ import (
 	"html"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,12 +17,39 @@ const (
 	AchievementPB
 )
 
+const (
+	SEX_UNKNOWN = iota
+	SEX_FEMALE
+	SEX_MALE
+)
+
 type Participant struct {
 	Id          string
 	Name        string
+	AgeGroup    int
+	Sex         int
 	Runs        int64
 	Vols        int64
+	Time        time.Duration
 	Achievement AchievementEnum
+}
+
+var reAgeGroup = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+)(-\d+)?$`)
+
+func ParseAgeGroup(s string) (int, int, error) {
+	if s == "" {
+		return -1, SEX_UNKNOWN, nil
+	}
+	if match := reAgeGroup.FindStringSubmatch(s); match != nil {
+		if ageGroup, err := strconv.Atoi(match[2]); err == nil {
+			if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
+				return ageGroup, SEX_FEMALE, nil
+			}
+			return ageGroup, SEX_MALE, nil
+		}
+	}
+
+	return -1, SEX_UNKNOWN, fmt.Errorf("unknown age group: %s", s)
 }
 
 func ParseAchievement(s string, country string) (AchievementEnum, error) {
@@ -67,22 +95,25 @@ func ParseAchievement(s string, country string) (AchievementEnum, error) {
 }
 
 type Run struct {
-	Parent     *Event
-	Index      uint64
-	Time       time.Time
-	IsComplete bool
-	DataTime   time.Time
-	Runners    []*Participant
-	Volunteers []*Participant
+	Parent      *Event
+	Index       uint64
+	Time        time.Time
+	IsComplete  bool
+	DataTime    time.Time
+	NRunners    uint64
+	NVolunteers uint64
+	Runners     []*Participant
+	Volunteers  []*Participant
 }
 
-func CreateRun(parent *Event, index uint64, t time.Time) *Run {
-	return &Run{parent, index, t, false, time.Time{}, nil, nil}
+func CreateRun(parent *Event, index uint64, t time.Time, nFinishers, nVolunteers uint64) *Run {
+	return &Run{parent, index, t, false, time.Time{}, nFinishers, nVolunteers, nil, nil}
 }
 
-var patternRunnerRow0 = regexp.MustCompile(`<tr class="Results-table-row" [^<]*><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact">(<a href="[^"]*/\d+")?`)
-var patternRunnerRow = regexp.MustCompile(`^<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="[^"]*" data-club="[^"]*" data-gender="[^"]*" data-position="\d+" data-runs="(\d+)" data-vols="(\d+)" data-agegrade="[^"]*" data-achievement="([^"]*)"><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
+var patternRunnerRow0 = regexp.MustCompile(`<tr class="Results-table-row" [^<]*><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact">(<a href="[^"]*/\d+")?.*?</tr>`)
+var patternRunnerRow = regexp.MustCompile(`^<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="([^"]*)" data-club="[^"]*" data-gender="[^"]*" data-position="\d+" data-runs="(\d+)" data-vols="(\d+)" data-agegrade="[^"]*" data-achievement="([^"]*)"><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
 var patternRunnerRowUnknown = regexp.MustCompile(`^<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="" data-club="" data-position="\d+" data-runs="0" data-agegrade="0" data-achievement=""><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact">.*`)
+var patternTime = regexp.MustCompile(`Results-table-td--time[^"]*&#10;                      "><div class="compact">(\d?:?\d\d:\d\d)</div>`)
 var patternVolunteerRow = regexp.MustCompile(`<a href='\./athletehistory/\?athleteNumber=(\d+)'>([^<]+)</a>`)
 
 func (run *Run) Complete() error {
@@ -107,32 +138,77 @@ func (run *Run) Complete() error {
 	for _, match0 := range matchesR0 {
 		if match := patternRunnerRow.FindStringSubmatch(match0[0]); match != nil {
 			name := html.UnescapeString(match[1])
-			runs, err := strconv.Atoi(match[2])
-			if err != nil {
-				return err
-			}
-			vols, err := strconv.Atoi(match[3])
+
+			ageGroup, sex, err := ParseAgeGroup(match[2])
 			if err != nil {
 				return err
 			}
 
-			achievement, err := ParseAchievement(match[4], run.Parent.Country)
+			runs, err := strconv.Atoi(match[3])
 			if err != nil {
 				return err
 			}
 
-			id := match[5]
-			run.Runners = append(run.Runners, &Participant{id, name, int64(runs), int64(vols), achievement})
+			vols, err := strconv.Atoi(match[4])
+			if err != nil {
+				return err
+			}
+
+			achievement, err := ParseAchievement(match[5], run.Parent.Country)
+			if err != nil {
+				return err
+			}
+
+			id := match[6]
+
+			var runTime time.Duration = 0
+			if matchTime := patternTime.FindStringSubmatch(match0[0]); matchTime != nil {
+				split := strings.Split(matchTime[1], ":")
+				if len(split) == 3 {
+					t, err := time.ParseDuration(fmt.Sprintf("%sh%sm%ss", split[0], split[1], split[2]))
+					if err != nil {
+						panic(err)
+					}
+					runTime = t
+				} else if len(split) == 2 {
+					t, err := time.ParseDuration(fmt.Sprintf("%sm%ss", split[0], split[1]))
+					if err != nil {
+						panic(err)
+					}
+					runTime = t
+				} else {
+					panic(fmt.Errorf("cannot parse duration: %s", matchTime[1]))
+				}
+			}
+
+			run.Runners = append(run.Runners, &Participant{id, name, ageGroup, sex, int64(runs), int64(vols), runTime, achievement})
 			continue
 		}
 
 		if match := patternRunnerRowUnknown.FindStringSubmatch(match0[0]); match != nil {
 			name := html.UnescapeString(match[1])
-			run.Runners = append(run.Runners, &Participant{"", name, 0, 0, AchievementNone})
+			run.Runners = append(run.Runners, &Participant{"", name, -2, SEX_UNKNOWN, 0, 0, 0, AchievementNone})
 			continue
 		}
 
 		return fmt.Errorf("cannot parse table row: %s", match0[0])
+	}
+
+	var runnerWithTime *Participant = nil
+	for _, p := range run.Runners {
+		if p.Time != 0 {
+			runnerWithTime = p
+			break
+		}
+	}
+	if runnerWithTime != nil {
+		for _, p := range run.Runners {
+			if p.Time != 0 {
+				runnerWithTime = p
+			} else {
+				p.Time = runnerWithTime.Time
+			}
+		}
 	}
 
 	matchesV := patternVolunteerRow.FindAllStringSubmatch(buf, -1)
@@ -140,7 +216,7 @@ func (run *Run) Complete() error {
 		id := match[1]
 		name := html.UnescapeString(match[2])
 
-		run.Volunteers = append(run.Volunteers, &Participant{id, name, -1, -1, AchievementNone})
+		run.Volunteers = append(run.Volunteers, &Participant{id, name, -1, SEX_UNKNOWN, -1, -1, 0, AchievementNone})
 	}
 
 	return nil

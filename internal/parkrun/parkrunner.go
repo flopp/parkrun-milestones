@@ -10,6 +10,7 @@ import (
 type Parkrunner struct {
 	Id         string
 	Name       string
+	AgeGroup   int
 	DataTime   time.Time
 	Runs       int64
 	JuniorRuns int64
@@ -21,12 +22,12 @@ func Milestone(number int64) bool {
 	return number == 25 || number == 50 || number == 100 || number == 250 || number == 500
 }
 
-func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
+func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, ageGroup int, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
 	if parkrunner, ok := parkrunners[id]; ok {
 		parkrunner.Active[runIndex] = true
-		parkrunner.update(dataTime, runs, juniorRuns, vols)
+		parkrunner.update(dataTime, ageGroup, runs, juniorRuns, vols)
 	} else {
-		parkrunners[id] = &Parkrunner{id, name, dataTime, runs, juniorRuns, vols, map[uint64]bool{runIndex: true}}
+		parkrunners[id] = &Parkrunner{id, name, ageGroup, dataTime, runs, juniorRuns, vols, map[uint64]bool{runIndex: true}}
 	}
 	return parkrunners
 }
@@ -75,6 +76,11 @@ func (parkrunner *Parkrunner) extractRunCount(buf string) (int, int, error) {
 		return 0, 0, nil
 	}
 
+	// only volunteer
+	if patternV.MatchString(buf) {
+		return 0, 0, nil
+	}
+
 	return 0, 0, fmt.Errorf("cannot find running stats for %s", parkrunner.Id)
 }
 
@@ -92,7 +98,7 @@ func (parkrunner *Parkrunner) NeedsUpdate() bool {
 	return true
 }
 
-func (parkrunner *Parkrunner) update(dataTime time.Time, runs int64, juniorRuns int64, vols int64) {
+func (parkrunner *Parkrunner) update(dataTime time.Time, ageGroup int, runs int64, juniorRuns int64, vols int64) {
 	if runs > parkrunner.Runs {
 		parkrunner.Runs = runs
 	}
@@ -101,6 +107,9 @@ func (parkrunner *Parkrunner) update(dataTime time.Time, runs int64, juniorRuns 
 	}
 	if vols > parkrunner.Vols {
 		parkrunner.Vols = vols
+	}
+	if ageGroup > parkrunner.AgeGroup {
+		parkrunner.AgeGroup = ageGroup
 	}
 	if dataTime.After(parkrunner.DataTime) {
 		parkrunner.DataTime = dataTime
@@ -133,7 +142,42 @@ func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
 		}
 	}
 
-	parkrunner.update(dataTime, int64(r), int64(j), int64(v))
+	parkrunner.update(dataTime, -2, int64(r), int64(j), int64(v))
 
 	return nil
+}
+
+var reParkrunnerEvent = regexp.MustCompile(`<tr><td><a href=".*/(.*)/results">[^<]*</a></td><td>(\d+)</td><td>[^<]*</td><td>[^<]*</td><td><span class="pretty-time">[^<]*</span></td><td><a href="[^"]*"`)
+
+func GetParkrunnerCountry(id string, eventCountries map[string]string) (string, error) {
+	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", id)
+	fileName := fmt.Sprintf("parkrunner/%s", id)
+	buf, _, err := DownloadAndRead(url, fileName)
+	if err != nil {
+		return "", err
+	}
+
+	counts := make(map[string]int)
+	for _, match := range reParkrunnerEvent.FindAllStringSubmatch(buf, -1) {
+		eventId := match[1]
+		count, err := strconv.Atoi(match[2])
+		if err != nil {
+			panic(err)
+		}
+		if country, found := eventCountries[eventId]; found {
+			//fmt.Printf("%s => %s %d %s\n", id, eventId, count, country)
+			counts[country] += count
+		}
+	}
+
+	maxCount := -1
+	maxCountry := "UNKNOWN"
+	for country, count := range counts {
+		if count > maxCount {
+			maxCount = count
+			maxCountry = country
+		}
+	}
+
+	return maxCountry, nil
 }

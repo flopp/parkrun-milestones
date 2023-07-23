@@ -1,6 +1,7 @@
 package download
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +12,9 @@ import (
 	file "github.com/flopp/parkrun-milestones/internal/file"
 )
 
-func download(url string, filePath string) error {
+func AlwaysDownload(url string, filePath string) error {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -51,7 +54,7 @@ func DownloadFileMaxMtime(url string, filePath string, maxMtime time.Time) error
 		}
 	}
 
-	return download(url, filePath)
+	return AlwaysDownload(url, filePath)
 }
 
 func DownloadFile(url string, filePath string, maxAge time.Duration) error {
@@ -59,5 +62,5 @@ func DownloadFile(url string, filePath string, maxAge time.Duration) error {
 		return nil
 	}
 
-	return download(url, filePath)
+	return AlwaysDownload(url, filePath)
 }
