@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	parkrun "github.com/flopp/parkrun-milestones/internal/parkrun"
 )
@@ -33,16 +35,20 @@ func parseCommandLine() CommandLineOptions {
 	}
 	flag.Parse()
 
-	if len(flag.Args()) != 2 {
+	if len(flag.Args()) == 2 {
+		year, err := strconv.Atoi(flag.Args()[1])
+		if err != nil {
+			panic(err)
+		}
+		return CommandLineOptions{
+			*forceReload, flag.Args()[0], year,
+		}
+	} else if len(flag.Args()) == 1 {
+		return CommandLineOptions{
+			*forceReload, flag.Args()[0], 0,
+		}
+	} else {
 		panic("bad command line")
-	}
-
-	year, err := strconv.Atoi(flag.Args()[1])
-	if err != nil {
-		panic(err)
-	}
-	return CommandLineOptions{
-		*forceReload, flag.Args()[0], year,
 	}
 }
 
@@ -59,28 +65,57 @@ type CountId struct {
 	Id    string
 }
 
-func printLine(count int, names []string) {
+func printLine(count int, names []string, exclusives, guests int) {
 	sort.Strings(names)
-	fmt.Printf("%d => %s\n", count, strings.Join(names, ", "))
+	fmt.Printf("%3dx #=%d x=%d g=%d %s\n", count, len(names), exclusives, guests, strings.Join(names, ", "))
 }
 
-func printHistogram(items []CountId, names map[string]string) {
+func printLineVol(count int, names []string) {
+	sort.Strings(names)
+	fmt.Printf("%3dx #=%d %s\n", count, len(names), strings.Join(names, ", "))
+}
+
+func printHistogram(items []CountId, names map[string]string, id_runs *map[string]int) {
 	last_count := -1
 	ns := make([]string, 0)
+	exclusives := 0
+	guests := 0
 	for _, item := range items {
 		if last_count != -1 && last_count != item.Count {
-			printLine(last_count, ns)
+			if id_runs != nil {
+				printLine(last_count, ns, exclusives, guests)
+			} else {
+				printLineVol(last_count, ns)
+			}
 			ns = make([]string, 0)
+			exclusives = 0
+			guests = 0
+		}
+		tag := ""
+		if id_runs != nil {
+			if r, ok := (*id_runs)[item.Id]; ok {
+				if r == item.Count {
+					tag = "/x"
+					exclusives += 1
+				} else if item.Count <= r/4 {
+					tag = "/g"
+					guests += 1
+				}
+			}
 		}
 		if n, ok := names[item.Id]; ok {
-			ns = append(ns, n)
+			ns = append(ns, n+tag)
 		} else {
-			ns = append(ns, item.Id)
+			ns = append(ns, item.Id+tag)
 		}
 		last_count = item.Count
 	}
 	if last_count != -1 {
-		printLine(last_count, ns)
+		if id_runs != nil {
+			printLine(last_count, ns, exclusives, guests)
+		} else {
+			printLineVol(last_count, ns)
+		}
 	}
 }
 
@@ -105,11 +140,25 @@ func main() {
 	max_runners := -1
 	sum_runners := 0
 	runners := make(map[string]int)
+	ageGroups := make(map[int]int)
 
 	names := make(map[string]string)
+	id_runs := make(map[string]int)
 
+	stat_participants := make([]int, 0)
+	stat_volunteers := make([]int, 0)
+
+	time_bins := make(map[int]int)
+	var min_time time.Duration = 0
+	var max_time time.Duration = 0
+	var sum_time time.Duration = 0
+	count_time := 0
+
+	sex_female := 0
+	sex_male := 0
+	sex_unknown := 0
 	for _, run := range event.Runs {
-		if run.Time.Year() != options.year {
+		if options.year != 0 && run.Time.Year() != options.year {
 			continue
 		}
 		runs += 1
@@ -120,11 +169,36 @@ func main() {
 
 		r := 0
 		v := 0
+		stat_participants = append(stat_participants, len(run.Runners))
+		stat_volunteers = append(stat_volunteers, len(run.Volunteers))
 
 		for _, p := range run.Runners {
 			r += 1
 			runners[p.Id] += 1
 			names[p.Id] = p.Name
+			id_runs[p.Id] = int(p.Runs)
+			ageGroups[p.AgeGroup] += 1
+
+			if p.Time != 0 {
+				t := int(math.Floor(p.Time.Minutes()))
+				time_bins[t] += 1
+				if min_time == 0 || p.Time < min_time {
+					min_time = p.Time
+				}
+				if max_time == 0 || p.Time > max_time {
+					max_time = p.Time
+				}
+				sum_time += p.Time
+				count_time += 1
+			}
+
+			if p.Sex == parkrun.SEX_FEMALE {
+				sex_female += 1
+			} else if p.Sex == parkrun.SEX_MALE {
+				sex_male += 1
+			} else {
+				sex_unknown += 1
+			}
 		}
 		for _, p := range run.Volunteers {
 			v += 1
@@ -153,10 +227,10 @@ func main() {
 	max_runs_ids := make([]string, 0)
 	count_runners := make([]CountId, 0, len(runners))
 	for id, count := range runners {
+		count_runners = append(count_runners, CountId{count, id})
 		if id == "" {
 			continue
 		}
-		count_runners = append(count_runners, CountId{count, id})
 		if max_runs < 0 || count > max_runs {
 			max_runs = count
 			max_runs_ids = make([]string, 0)
@@ -220,7 +294,64 @@ func main() {
 	fmt.Printf("    Max volunteerings: %d (%s)\n", max_vols, max_vols_names)
 
 	fmt.Println("\nParticipants Histogram")
-	printHistogram(count_runners, names)
+	printHistogram(count_runners, names, &id_runs)
+
+	fmt.Println("\nPARTICIPANTS:")
+	for i := 0; i < len(stat_participants); i += 1 {
+		fmt.Printf("%d;%d;%d\n", i+1, stat_participants[i], stat_volunteers[i])
+	}
+
+	fmt.Println("\nSEX GROUPS:")
+	fmt.Printf("female;%d\n", sex_female)
+	fmt.Printf("male;%d\n", sex_male)
+	fmt.Printf("unknown;%d\n", sex_unknown)
+
+	fmt.Println("\nAGE GROUPS:")
+	for ageGroup, count := range ageGroups {
+		fmt.Printf("%d;%d\n", ageGroup, count)
+	}
+
+	events, err := parkrun.AllEvents()
+	if err != nil {
+		panic(err)
+	}
+	eventCountries := make(map[string]string)
+	for _, event := range events {
+		eventCountries[event.Id] = event.Country
+	}
+	countryCounts := make(map[string]int)
+	guests := 0
+	for _, count_id := range count_runners {
+		total_count, ok := id_runs[count_id.Id]
+		if !ok {
+			panic(fmt.Errorf("no total runs for %s", count_id.Id))
+		}
+
+		if count_id.Count <= total_count/4 {
+			//fmt.Printf("guest: %s (%d %d)\n", count_id.Id, count_id.Count, total_count)
+			country, err := parkrun.GetParkrunnerCountry(count_id.Id, eventCountries)
+			if err != nil {
+				panic(err)
+			}
+			//fmt.Println(country)
+			countryCounts[country] += count_id.Count
+			guests += count_id.Count
+		}
+	}
+	fmt.Printf("\nGUESTS:\n%d\n", guests)
+	fmt.Println("\nGUEST COUNTRIES:")
+	for country, count := range countryCounts {
+		fmt.Printf("%s;%d\n", country, count)
+	}
+
+	fmt.Println("\nRUN TIMES:")
+	fmt.Printf("min=%v\n", min_time)
+	fmt.Printf("max=%v\n", max_time)
+	fmt.Printf("avg=%v\n", time.Duration(1000000000.0*sum_time.Seconds()/float64(count_time)))
+	for t, count := range time_bins {
+		fmt.Printf("%d;%d\n", t, count)
+	}
+
 	fmt.Println("\nVolunteers Histogram")
-	printHistogram(count_vols, names)
+	printHistogram(count_vols, names, nil)
 }

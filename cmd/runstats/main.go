@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	parkrun "github.com/flopp/parkrun-milestones/internal/parkrun"
 )
@@ -21,6 +22,7 @@ OPTIONS:
 type CommandLineOptions struct {
 	forceReload bool
 	fancy       bool
+	table       bool
 	country     string
 	eventIds    []string
 }
@@ -28,6 +30,7 @@ type CommandLineOptions struct {
 func parseCommandLine() CommandLineOptions {
 	forceReload := flag.Bool("force", false, "force reload of all data")
 	fancy := flag.Bool("fancy", false, "fancy formatting using emoji")
+	table := flag.Bool("table", false, "csv style output")
 	country := flag.String("country", "", "select all events of the specified country")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usage, os.Args[0])
@@ -42,7 +45,7 @@ func parseCommandLine() CommandLineOptions {
 	}
 
 	return CommandLineOptions{
-		*forceReload, *fancy, *country, flag.Args(),
+		*forceReload, *fancy, *table, *country, flag.Args(),
 	}
 }
 
@@ -71,6 +74,9 @@ func getEvents(eventIds []string, country string) []*parkrun.Event {
 }
 
 func pi(n int, icon string, text string) {
+	if n == 0 {
+		return
+	}
 	sep := "\u2003"
 	if text != "" {
 		fmt.Printf("%s%s%s: %d\n", icon, sep, text, n)
@@ -98,26 +104,81 @@ func pi2(n int, icon string, text string) {
 }
 
 func printFancy(event *parkrun.Event, run *parkrun.Run, r500, r250, r100, r50, r25, r1, pb, firstEvent, v500, v250, v100, v50, v25, v1 int) {
-	fmt.Printf("%s\n", event.Name)
-	pi(int(run.Index), "#️⃣", "")
-	ps(run.Time.Format("2006-01-02"), "📅", "")
-	pi(len(run.Runners), "🏃", "Runners")
-	pi2(pb, "⏱️", "new PB")
-	pi2(firstEvent, "🧳", "first visitors")
-	pi2(r1, "⭐️", "new parkrunners")
-	pi2(r25, "🏆", "25. run anniversary")
-	pi2(r50, "🏆", "50. run anniversary")
-	pi2(r100, "🏆", "100. run anniversary")
-	pi2(r250, "🏆", "250. run anniversary")
-	pi2(r500, "🏆", "500. run anniversary")
-	pi(len(run.Volunteers), "🦺", "Volunteers")
-	pi2(v1, "⭐️", "new volunteers")
-	pi2(v25, "🏆", "25. vol. anniversary")
-	pi2(v50, "🏆", "50. vol. anniversary")
-	pi2(v100, "🏆", "100. vol. anniversary")
-	pi2(v250, "🏆", "250. vol. anniversary")
-	pi2(v500, "🏆", "500. vol. anniversary")
-	ps(fmt.Sprintf("https://%s/%s/results/%d/", event.CountryUrl, event.Id, run.Index), "👀", "")
+	fmt.Printf("%s #️⃣ %d\n", event.Name, int(run.Index))
+	ps(run.Time.Format("02.01.2006"), "📅", "")
+	ps("", "⛅", "Wetter / weather")
+	ps("", "🎁", "Special")
+	pi(len(run.Runners), "🏃", "Teilnehmer / runners")
+	pi(pb, "⏱️", "Neue Bestzeiten / new PB")
+	pi(firstEvent, "🌍", "Besucher / visitors")
+	pi(r1, "⭐️", "Neue Teilnehmer / first-time runners")
+	pi(r25, "🏆", "25. run anniversary")
+	pi(r50, "🏆", "50. run anniversary")
+	pi(r100, "🏆", "100. run anniversary")
+	pi(r250, "🏆", "250. run anniversary")
+	pi(r500, "🏆", "500. run anniversary")
+	pi(len(run.Volunteers), "🦺", "Helfende / volunteers")
+	pi(v1, "⭐️", "Neue Helfende / first-time volunteers")
+	pi(v25, "🏆", "25. vol. anniversary")
+	pi(v50, "🏆", "50. vol. anniversary")
+	pi(v100, "🏆", "100. vol. anniversary")
+	pi(v250, "🏆", "250. vol. anniversary")
+	pi(v500, "🏆", "500. vol. anniversary")
+	fmt.Printf("\nhttps://%s/%s/results/%d/\n", event.CountryUrl, event.Id, run.Index)
+	fmt.Println("#parkrun #running #laufen #mastodonlauftreff")
+}
+
+func fmtAgeGroup(ageGroup int) string {
+	if ageGroup < 0 {
+		return "n/a"
+	}
+	return fmt.Sprintf("%d-%d", ageGroup, ageGroup+4)
+}
+
+func fmtTime(t time.Duration) string {
+	if t == 0 {
+		return "n/a"
+	}
+	return fmt.Sprintf("%d", int64(t.Seconds()))
+}
+
+func printTable(event *parkrun.Event, run *parkrun.Run) {
+	fmt.Printf("%s #%d %s\n", event.Name, run.Index, run.Time.Format("2006-01-02"))
+
+	fmt.Println("\nRunners")
+	fmt.Println("Name;Age Group;Total Runs;Finishing Time;Special")
+	for _, participant := range run.Runners {
+		fmt.Printf("%s;", participant.Name)
+		if participant.Id != "" {
+			fmt.Printf("%s;", fmtAgeGroup(participant.AgeGroup))
+			fmt.Printf("%d;", participant.Runs)
+			fmt.Printf("%s;", fmtTime(participant.Time))
+		} else {
+			fmt.Printf("n/a;n/a;n/a;")
+		}
+
+		if participant.Achievement == parkrun.AchievementFirst {
+			if participant.Runs == 1 {
+				fmt.Printf("first parkrun")
+			} else {
+				fmt.Printf("first time at %s", event.Name)
+			}
+		} else if participant.Achievement == parkrun.AchievementPB {
+			fmt.Printf("new personal best at %s", event.Name)
+		}
+
+		fmt.Println("")
+	}
+
+	fmt.Println("\nVolunteers")
+	fmt.Println("Name;Total Volunteerings")
+	for _, participant := range run.Volunteers {
+		parkrunner := &parkrun.Parkrunner{participant.Id, participant.Name, -1, run.Time, -1, -1, -1, nil}
+		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s;%d\n", participant.Name, parkrunner.Vols)
+	}
 }
 
 func main() {
@@ -153,6 +214,11 @@ func main() {
 		v100 := len(stats.V100)
 		v250 := len(stats.V250)
 		v500 := len(stats.V500)
+
+		if options.table {
+			printTable(event, run)
+			continue
+		}
 
 		if options.fancy {
 			printFancy(event, run, r500, r250, r100, r50, r25, r1, pb, firstEvent, v500, v250, v100, v50, v25, v1)

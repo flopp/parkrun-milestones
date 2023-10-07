@@ -84,9 +84,15 @@ func ParseAchievement(s string, country string) (AchievementEnum, error) {
 		if pattern == s {
 			return AchievementFirst, nil
 		}
+		if fmt.Sprintf("[parkrun_translate phrase='%s']", pattern) == s {
+			return AchievementFirst, nil
+		}
 	}
 	for _, pattern := range pb {
 		if pattern == s {
+			return AchievementPB, nil
+		}
+		if fmt.Sprintf("[parkrun_translate phrase='%s']", pattern) == s {
 			return AchievementPB, nil
 		}
 	}
