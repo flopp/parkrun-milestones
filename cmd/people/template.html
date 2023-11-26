@@ -11,13 +11,13 @@
         <section class="section">
             <div class="notification is-info">
                 <div class="content">
-                    Alle bisherigen Teilnehmer und Helfer des Dietenbach parkrun; sortiert nach Summe von Teilnahmen und Helfereinsätzen.<br>
-                    Alle Werte sind auf den Dietenbach parkrun bezogen:
+                    Alle bisherigen Teilnehmer und Helfer des Dietenbach parkrun; sortiert nach Anzahl Dietenback parkrun Events.<br>
                     <ul>
-                        <li>Run=Anzahl Teilnahmen als Läufer</li>
-                        <li>PB=Bestzeit</li>
-                        <li>Vol=Anzahl Helfereinsätze</li>
-                        <li>Aktiv=Datum der letzten Aktivität</li>
+                        <li>Run=Anzahl Läufe beim Dietenbach parkrun (Anzahl Läufe insgesamt)</li>
+                        <li>PB=Bestzeit beim Dietenbach parkrun</li>
+                        <li>Vol=Anzahl Helfereinsätze beim Dietenbach parkrun (Anzahl Helfereinsätze total)</li>
+                        <li>Active=Anzahl beim Dietenbach parkrun Events</li>
+                        <li>Last=Letztes Dietenbach parkrun Event</li>
                     </ul>
                 </div>
             </div>
@@ -30,7 +30,8 @@
                         <th>Run</th>
                         <th>PB</th>
                         <th>Vol</th>
-                        <th>Aktiv</th>
+                        <th>Events</th>
+                        <th>Last</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,16 +44,19 @@
                             <a class="showqrcode" data-name="{{.Name}}" data-id="{{.Id}}">A{{.Id}}</a>  
                         </td>
                         <td class="is-family-monospace">
-                            {{.Runs}}
+                            {{.Runs}} ({{.RunsAll}})
                         </td>
                         <td class="is-family-monospace">
                             {{.PBStr}}
                         </td>
                         <td class="is-family-monospace">
-                            {{.Vols}}
+                            {{.Vols}} ({{.VolsAll}})
                         </td>
                         <td class="is-family-monospace">
-                            {{.LastActive.Format "2006-01-02"}}
+                            {{.Active}}
+                        </td>
+                        <td class="is-family-monospace">
+                            {{.Last.Time.Format "2006-01-02"}}/{{.Last.Index}}
                         </td>
                     </tr>
                     {{end}}

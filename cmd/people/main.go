@@ -51,12 +51,15 @@ func getEvent(eventId string) *parkrun.Event {
 }
 
 type Person struct {
-	Id         string
-	Name       string
-	LastActive time.Time
-	Runs       uint64
-	Vols       uint64
-	PB         time.Duration
+	Id      string
+	Name    string
+	Last    *parkrun.Run
+	Runs    uint64
+	Vols    uint64
+	Active  uint64
+	PB      time.Duration
+	RunsAll int64
+	VolsAll int64
 }
 
 func (person *Person) PBStr() string {
@@ -66,19 +69,49 @@ func (person *Person) PBStr() string {
 	return person.PB.String()
 }
 
-func (person *Person) update(t time.Time, r uint64, v uint64, pb time.Duration) {
-	if t.After(person.LastActive) {
-		person.LastActive = t
+func (person *Person) update(run *parkrun.Run, r uint64, v uint64, pb time.Duration, rAll int64, vAll int64) {
+	if run != nil {
+		person.Last = run
 	}
 	person.Runs += r
 	person.Vols += v
+	if r+v > 0 {
+		person.Active += 1
+	}
 	if person.PB == 0 || (pb > 0 && pb < person.PB) {
 		person.PB = pb
 	}
+	if rAll > person.RunsAll {
+		person.RunsAll = rAll
+	}
+	if vAll > person.VolsAll {
+		person.VolsAll = vAll
+	}
 }
 
-func createPerson(i string, n string, t time.Time, r uint64, v uint64, pb time.Duration) *Person {
-	return &Person{i, n, t, r, v, pb}
+func createPerson(i string, n string, run *parkrun.Run, r uint64, v uint64, pb time.Duration, rAll int64, vAll int64) *Person {
+	return &Person{i, n, run, r, v, 1, pb, rAll, vAll}
+}
+
+func (p *Person) fetchMissingStats() error {
+	if p.RunsAll >= 0 || p.VolsAll >= 0 {
+		return nil
+	}
+	fmt.Printf("Updating %s\n", p.Name)
+	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", p.Id)
+	fileName := fmt.Sprintf("parkrunner/%s", p.Id)
+	buf, _, err := parkrun.DownloadAndRead(url, fileName)
+	if err != nil {
+		return err
+	}
+
+	r, j, v, err := parkrun.ExtractData(buf)
+	if err != nil {
+		return err
+	}
+
+	p.update(nil, 0, 0, 0, int64(r+j), int64(v))
+	return nil
 }
 
 func main() {
@@ -99,40 +132,80 @@ func main() {
 			panic(err)
 		}
 
+		type rv struct{ r, v *parkrun.Participant }
+		pp := make(map[string]*rv)
+
 		for _, p := range run.Runners {
 			if p.Id == "" {
 				continue
 			}
-			person, found := personsMap[p.Id]
-			if !found {
-				personsMap[p.Id] = createPerson(p.Id, p.Name, run.Time, 1, 0, p.Time)
-			} else {
-				person.update(run.Time, 1, 0, p.Time)
-			}
+			pp[p.Id] = &rv{p, nil}
 		}
-
 		for _, p := range run.Volunteers {
 			if p.Id == "" {
 				continue
 			}
-			person, found := personsMap[p.Id]
-			if !found {
-				personsMap[p.Id] = createPerson(p.Id, p.Name, run.Time, 0, 1, 0)
+			ppid, found := pp[p.Id]
+			if found {
+				ppid.v = p
 			} else {
-				person.update(run.Time, 0, 1, 0)
+				pp[p.Id] = &rv{nil, p}
+			}
+		}
+
+		for id, ppid := range pp {
+			person, found := personsMap[id]
+			if !found {
+				if ppid.r != nil {
+					name := ppid.r.Name
+					time := ppid.r.Time
+					r := ppid.r.Runs
+					v := ppid.r.Vols
+					if ppid.v != nil {
+						personsMap[id] = createPerson(id, name, run, 1, 1, time, r, v)
+					} else {
+						personsMap[id] = createPerson(id, name, run, 1, 0, time, r, v)
+					}
+				} else {
+					name := ppid.v.Name
+					time := ppid.v.Time
+					r := ppid.v.Runs
+					v := ppid.v.Vols
+					personsMap[id] = createPerson(id, name, run, 0, 1, time, r, v)
+				}
+			} else {
+				if ppid.r != nil {
+					time := ppid.r.Time
+					r := ppid.r.Runs
+					v := ppid.r.Vols
+					if ppid.v != nil {
+						person.update(run, 1, 1, time, r, v)
+					} else {
+						person.update(run, 1, 0, time, r, v)
+					}
+				} else {
+					time := ppid.v.Time
+					r := ppid.v.Runs
+					v := ppid.v.Vols
+					person.update(run, 0, 1, time, r, v)
+				}
 			}
 		}
 	}
 
 	persons := make([]*Person, 0, len(personsMap))
 	for _, p := range personsMap {
+		err := p.fetchMissingStats()
+		if err != nil {
+			panic(err)
+		}
 		persons = append(persons, p)
 	}
 	sort.Slice(persons, func(i, j int) bool {
 		pi := persons[i]
 		pj := persons[j]
-		ni := pi.Runs + pi.Vols
-		nj := pj.Runs + pj.Vols
+		ni := pi.Active
+		nj := pj.Active
 		if ni != nj {
 			return ni >= nj
 		}

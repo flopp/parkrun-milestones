@@ -40,7 +40,7 @@ var (
 	patternV   = regexp.MustCompile(`<strong>Total Credits</strong></td><td><strong>(\d+)</strong>`)
 )
 
-func (parkrunner *Parkrunner) extractRunCount(buf string) (int, int, error) {
+func ExtractRunData(buf string) (int, int, error) {
 	match := patternR1.FindStringSubmatch(buf)
 	if match != nil {
 		r, err := strconv.Atoi(match[1])
@@ -81,7 +81,27 @@ func (parkrunner *Parkrunner) extractRunCount(buf string) (int, int, error) {
 		return 0, 0, nil
 	}
 
-	return 0, 0, fmt.Errorf("cannot find running stats for %s", parkrunner.Id)
+	return 0, 0, fmt.Errorf("cannot find running stats")
+}
+
+func ExtractVolData(buf string) (int, error) {
+	matchV := patternV.FindStringSubmatch(buf)
+	if matchV != nil {
+		return strconv.Atoi(matchV[1])
+	}
+	return 0, nil
+}
+
+func ExtractData(buf string) (int, int, int, error) {
+	r, j, err := ExtractRunData(buf)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	v, err := ExtractVolData(buf)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return r, j, v, nil
 }
 
 func (parkrunner *Parkrunner) NeedsUpdate() bool {
@@ -128,18 +148,9 @@ func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
 		return err
 	}
 
-	r, j, err := parkrunner.extractRunCount(buf)
+	r, j, v, err := ExtractData(buf)
 	if err != nil {
 		return err
-	}
-
-	v := 0
-	matchV := patternV.FindStringSubmatch(buf)
-	if matchV != nil {
-		v, err = strconv.Atoi(matchV[1])
-		if err != nil {
-			return err
-		}
 	}
 
 	parkrunner.update(dataTime, -2, int64(r), int64(j), int64(v))
