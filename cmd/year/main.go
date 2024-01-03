@@ -140,7 +140,8 @@ func main() {
 	max_runners := -1
 	sum_runners := 0
 	runners := make(map[string]int)
-	ageGroups := make(map[int]int)
+	ageGroups := make(map[string]int)
+	runVol := make(map[string]int)
 
 	names := make(map[string]string)
 	id_runs := make(map[string]int)
@@ -157,6 +158,8 @@ func main() {
 	sex_female := 0
 	sex_male := 0
 	sex_unknown := 0
+
+	people := make(map[string]*parkrun.Participant, 0)
 	for _, run := range event.Runs {
 		if options.year != 0 && run.Time.Year() != options.year {
 			continue
@@ -172,12 +175,15 @@ func main() {
 		stat_participants = append(stat_participants, len(run.Runners))
 		stat_volunteers = append(stat_volunteers, len(run.Volunteers))
 
+		rv := make(map[string]int)
 		for _, p := range run.Runners {
 			r += 1
 			runners[p.Id] += 1
 			names[p.Id] = p.Name
 			id_runs[p.Id] = int(p.Runs)
 			ageGroups[p.AgeGroup] += 1
+			people[p.Id] = p
+			rv[p.Id] += 1
 
 			if p.Time != 0 {
 				t := int(math.Floor(p.Time.Minutes()))
@@ -204,6 +210,8 @@ func main() {
 			v += 1
 			volunteers[p.Id] += 1
 			names[p.Id] = p.Name
+			people[p.Id] = p
+			rv[p.Id] += 1
 		}
 
 		if min_runners < 0 || r < min_runners {
@@ -221,6 +229,10 @@ func main() {
 			max_volunteers = v
 		}
 		sum_volunteers += v
+
+		for id, _ := range rv {
+			runVol[id] += 1
+		}
 	}
 
 	max_runs := -1
@@ -280,6 +292,26 @@ func main() {
 	}
 	max_vols_names := strings.Join(vn, ", ")
 
+	count_runsvols := make([]CountId, 0, len(runners))
+	for id, count := range runVol {
+		count_runsvols = append(count_runsvols, CountId{count, id})
+	}
+	sort.Slice(count_runsvols, func(i, j int) bool {
+		return count_runsvols[i].Count >= count_runsvols[j].Count
+	})
+
+	/*
+		for id, _ := range people {
+			r, rok := runners[id]
+			v, vok := volunteers[id]
+			if !rok {
+				r = 0
+			}
+			if !vok {
+				v = 0
+			}
+		}
+	*/
 	fmt.Printf("Statistics for %s in %d\n", event.Name, options.year)
 	fmt.Printf("Runs: %d\n", runs)
 	fmt.Printf("Participants:\n")
@@ -293,22 +325,22 @@ func main() {
 	fmt.Printf("    Max / ø / Min (per event): %d / %.1f / %d\n", max_volunteers, float64(sum_volunteers)/float64(runs), min_volunteers)
 	fmt.Printf("    Max volunteerings: %d (%s)\n", max_vols, max_vols_names)
 
-	fmt.Println("\nParticipants Histogram")
+	fmt.Println("\nParticipants Histogram (/g=guest, /x=exclusive)")
 	printHistogram(count_runners, names, &id_runs)
 
-	fmt.Println("\nPARTICIPANTS:")
+	fmt.Println("\nEVENT;PARTICIPANTS;VOLUNTEERS")
 	for i := 0; i < len(stat_participants); i += 1 {
 		fmt.Printf("%d;%d;%d\n", i+1, stat_participants[i], stat_volunteers[i])
 	}
 
-	fmt.Println("\nSEX GROUPS:")
+	fmt.Println("\nSEXGROUP;COUNT")
 	fmt.Printf("female;%d\n", sex_female)
 	fmt.Printf("male;%d\n", sex_male)
 	fmt.Printf("unknown;%d\n", sex_unknown)
 
-	fmt.Println("\nAGE GROUPS:")
+	fmt.Println("\nAGEGROUP;COUNT")
 	for ageGroup, count := range ageGroups {
-		fmt.Printf("%d;%d\n", ageGroup, count)
+		fmt.Printf("%s;%d\n", ageGroup, count)
 	}
 
 	events, err := parkrun.AllEvents()
@@ -354,4 +386,35 @@ func main() {
 
 	fmt.Println("\nVolunteers Histogram")
 	printHistogram(count_vols, names, nil)
+
+	fmt.Println("\nRun Or Vol")
+	printHistogram(count_runsvols, names, nil)
+
+	fmt.Println("\nNames Histogram")
+	firstnames_count := make(map[string]int)
+	for _, p := range people {
+		name := p.Name
+		a := strings.Split(name, " ")
+		if len(a) < 2 {
+			fmt.Println(name)
+		} else {
+			firstnames_count[a[0]] += 1
+		}
+	}
+
+	type str_int struct {
+		s string
+		i int
+	}
+
+	firstnames := make([]str_int, 0)
+	for s, i := range firstnames_count {
+		firstnames = append(firstnames, str_int{s, i})
+	}
+	sort.Slice(firstnames, func(i, j int) bool {
+		return firstnames[i].i >= firstnames[j].i
+	})
+	for _, n := range firstnames {
+		fmt.Printf("%s %d\n", n.s, n.i)
+	}
 }

@@ -10,7 +10,7 @@ import (
 type Parkrunner struct {
 	Id         string
 	Name       string
-	AgeGroup   int
+	AgeGroup   string
 	DataTime   time.Time
 	Runs       int64
 	JuniorRuns int64
@@ -22,7 +22,7 @@ func Milestone(number int64) bool {
 	return number == 25 || number == 50 || number == 100 || number == 250 || number == 500
 }
 
-func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, ageGroup int, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
+func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, ageGroup string, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
 	if parkrunner, ok := parkrunners[id]; ok {
 		parkrunner.Active[runIndex] = true
 		parkrunner.update(dataTime, ageGroup, runs, juniorRuns, vols)
@@ -118,7 +118,7 @@ func (parkrunner *Parkrunner) NeedsUpdate() bool {
 	return true
 }
 
-func (parkrunner *Parkrunner) update(dataTime time.Time, ageGroup int, runs int64, juniorRuns int64, vols int64) {
+func (parkrunner *Parkrunner) update(dataTime time.Time, ageGroup string, runs int64, juniorRuns int64, vols int64) {
 	if runs > parkrunner.Runs {
 		parkrunner.Runs = runs
 	}
@@ -128,7 +128,7 @@ func (parkrunner *Parkrunner) update(dataTime time.Time, ageGroup int, runs int6
 	if vols > parkrunner.Vols {
 		parkrunner.Vols = vols
 	}
-	if ageGroup > parkrunner.AgeGroup {
+	if ageGroup != "??" {
 		parkrunner.AgeGroup = ageGroup
 	}
 	if dataTime.After(parkrunner.DataTime) {
@@ -153,7 +153,7 @@ func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
 		return err
 	}
 
-	parkrunner.update(dataTime, -2, int64(r), int64(j), int64(v))
+	parkrunner.update(dataTime, "??", int64(r), int64(j), int64(v))
 
 	return nil
 }

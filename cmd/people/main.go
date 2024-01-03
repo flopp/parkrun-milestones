@@ -97,8 +97,8 @@ func (p *Person) fetchMissingStats() error {
 	if p.RunsAll >= 0 || p.VolsAll >= 0 {
 		return nil
 	}
-	fmt.Printf("Updating %s\n", p.Name)
 	url := fmt.Sprintf("https://www.parkrun.org.uk/parkrunner/%s/", p.Id)
+	fmt.Printf("Updating %s %s\n", p.Name, url)
 	fileName := fmt.Sprintf("parkrunner/%s", p.Id)
 	buf, _, err := parkrun.DownloadAndRead(url, fileName)
 	if err != nil {

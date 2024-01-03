@@ -7,6 +7,7 @@ build:
 	go build -o parkrun-year cmd/year/main.go
 	go build -o parkrun-graphs cmd/graphs/main.go
 	go build -o parkrun-people cmd/people/main.go
+	go build -o freiburg-temp cmd/freiburgtemp/main.go
 
 .PHONY: vet
 vet:

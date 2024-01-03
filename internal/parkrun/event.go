@@ -75,7 +75,9 @@ func AllEvents() ([]*Event, error) {
 			return nil, fmt.Errorf("cannot get 'countries/%s/url' from 'events.json", countryId)
 		}
 
-		countryLookup[countryId] = urlI.(string)
+		if urlI != nil {
+			countryLookup[countryId] = urlI.(string)
+		}
 	}
 
 	eventsI, ok := result["events"]
@@ -365,7 +367,7 @@ func (event *Event) GetStats() *EventStats {
 		}
 	}
 	for _, participant := range run.Volunteers {
-		parkrunner := &Parkrunner{participant.Id, participant.Name, -1, run.Time, -1, -1, -1, nil}
+		parkrunner := &Parkrunner{participant.Id, participant.Name, "??", run.Time, -1, -1, -1, nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
 			panic(err)
 		}

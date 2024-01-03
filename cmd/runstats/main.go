@@ -128,11 +128,8 @@ func printFancy(event *parkrun.Event, run *parkrun.Run, r500, r250, r100, r50, r
 	fmt.Println("#parkrun #running #laufen #mastodonlauftreff")
 }
 
-func fmtAgeGroup(ageGroup int) string {
-	if ageGroup < 0 {
-		return "n/a"
-	}
-	return fmt.Sprintf("%d-%d", ageGroup, ageGroup+4)
+func fmtAgeGroup(ageGroup string) string {
+	return ageGroup
 }
 
 func fmtTime(t time.Duration) string {
@@ -173,7 +170,7 @@ func printTable(event *parkrun.Event, run *parkrun.Run) {
 	fmt.Println("\nVolunteers")
 	fmt.Println("Name;Total Volunteerings")
 	for _, participant := range run.Volunteers {
-		parkrunner := &parkrun.Parkrunner{participant.Id, participant.Name, -1, run.Time, -1, -1, -1, nil}
+		parkrunner := &parkrun.Parkrunner{participant.Id, participant.Name, "??", run.Time, -1, -1, -1, nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
 			panic(err)
 		}

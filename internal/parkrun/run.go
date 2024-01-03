@@ -26,7 +26,7 @@ const (
 type Participant struct {
 	Id          string
 	Name        string
-	AgeGroup    int
+	AgeGroup    string
 	Sex         int
 	Runs        int64
 	Vols        int64
@@ -34,22 +34,34 @@ type Participant struct {
 	Achievement AchievementEnum
 }
 
-var reAgeGroup = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+)(-\d+)?$`)
+var reAgeGroup1 = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+-\d+)$`)
+var reAgeGroup2 = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+)$`)
+var reAgeGroup3 = regexp.MustCompile(`^([fFmMwW])(WC)$`)
 
-func ParseAgeGroup(s string) (int, int, error) {
+func ParseAgeGroup(s string) (string, int, error) {
 	if s == "" {
-		return -1, SEX_UNKNOWN, nil
+		return "??", SEX_UNKNOWN, nil
 	}
-	if match := reAgeGroup.FindStringSubmatch(s); match != nil {
-		if ageGroup, err := strconv.Atoi(match[2]); err == nil {
-			if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
-				return ageGroup, SEX_FEMALE, nil
-			}
-			return ageGroup, SEX_MALE, nil
+	if match := reAgeGroup1.FindStringSubmatch(s); match != nil {
+		if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
+			return match[2], SEX_FEMALE, nil
 		}
+		return match[2], SEX_MALE, nil
+	}
+	if match := reAgeGroup2.FindStringSubmatch(s); match != nil {
+		if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
+			return match[2], SEX_FEMALE, nil
+		}
+		return match[2], SEX_MALE, nil
+	}
+	if match := reAgeGroup3.FindStringSubmatch(s); match != nil {
+		if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
+			return match[2], SEX_FEMALE, nil
+		}
+		return match[2], SEX_MALE, nil
 	}
 
-	return -1, SEX_UNKNOWN, fmt.Errorf("unknown age group: %s", s)
+	return s, SEX_UNKNOWN, fmt.Errorf("unknown age group: %s", s)
 }
 
 func ParseAchievement(s string, country string) (AchievementEnum, error) {
@@ -193,7 +205,7 @@ func (run *Run) Complete() error {
 
 		if match := patternRunnerRowUnknown.FindStringSubmatch(match0[0]); match != nil {
 			name := html.UnescapeString(match[1])
-			run.Runners = append(run.Runners, &Participant{"", name, -2, SEX_UNKNOWN, 0, 0, 0, AchievementNone})
+			run.Runners = append(run.Runners, &Participant{"", name, "??", SEX_UNKNOWN, 0, 0, 0, AchievementNone})
 			continue
 		}
 
@@ -222,7 +234,7 @@ func (run *Run) Complete() error {
 		id := match[1]
 		name := html.UnescapeString(match[2])
 
-		run.Volunteers = append(run.Volunteers, &Participant{id, name, -1, SEX_UNKNOWN, -1, -1, 0, AchievementNone})
+		run.Volunteers = append(run.Volunteers, &Participant{id, name, "??", SEX_UNKNOWN, -1, -1, 0, AchievementNone})
 	}
 
 	return nil
