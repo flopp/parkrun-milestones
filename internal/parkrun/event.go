@@ -322,14 +322,34 @@ type EventStats struct {
 	R25        []*Participant
 	R50        []*Participant
 	R100       []*Participant
+	R150       []*Participant
+	R200       []*Participant
 	R250       []*Participant
+	R300       []*Participant
+	R350       []*Participant
+	R400       []*Participant
+	R450       []*Participant
 	R500       []*Participant
+	R550       []*Participant
+	R600       []*Participant
+	R650       []*Participant
+	R700       []*Participant
 	V1         []*Participant
 	V25        []*Participant
 	V50        []*Participant
 	V100       []*Participant
+	V150       []*Participant
+	V200       []*Participant
 	V250       []*Participant
+	V300       []*Participant
+	V350       []*Participant
+	V400       []*Participant
+	V450       []*Participant
 	V500       []*Participant
+	V550       []*Participant
+	V600       []*Participant
+	V650       []*Participant
+	V700       []*Participant
 }
 
 func (event *Event) GetStats() *EventStats {
@@ -343,6 +363,7 @@ func (event *Event) GetStats() *EventStats {
 		panic(err)
 	}
 
+	fmt.Printf("Collating Running Milestones")
 	stats := EventStats{}
 	for _, participant := range run.Runners {
 		if participant.Achievement == AchievementFirst {
@@ -354,36 +375,78 @@ func (event *Event) GetStats() *EventStats {
 		} else if participant.Achievement == AchievementPB {
 			stats.PB = append(stats.PB, participant)
 		}
-		if participant.Runs == 25 {
+		switch participant.Runs {
+		case 25:
 			stats.R25 = append(stats.R25, participant)
-		} else if participant.Runs == 50 {
+		case 50:
 			stats.R50 = append(stats.R50, participant)
-		} else if participant.Runs == 100 {
+		case 100:
 			stats.R100 = append(stats.R100, participant)
-		} else if participant.Runs == 250 {
+		case 150:
+			stats.R150 = append(stats.R150, participant)
+		case 200:
+			stats.R200 = append(stats.R200, participant)
+		case 250:
 			stats.R250 = append(stats.R250, participant)
-		} else if participant.Runs == 500 {
+		case 300:
+			stats.R300 = append(stats.R300, participant)
+		case 350:
+			stats.R350 = append(stats.R350, participant)
+		case 400:
+			stats.R400 = append(stats.R400, participant)
+		case 450:
+			stats.R450 = append(stats.R450, participant)
+		case 500:
 			stats.R500 = append(stats.R500, participant)
+		case 550:
+			stats.R550 = append(stats.R550, participant)
+		case 600:
+			stats.R600 = append(stats.R600, participant)
+		case 650:
+			stats.R650 = append(stats.R650, participant)
+		case 700:
+			stats.R700 = append(stats.R700, participant)
 		}
 	}
+	fmt.Printf("Collating Volunteer Milestones")
 	for _, participant := range run.Volunteers {
 		parkrunner := &Parkrunner{participant.Id, participant.Name, "??", run.Time, -1, -1, -1, nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
 			panic(err)
 		}
-
-		if parkrunner.Vols == 1 {
+		switch parkrunner.Vols {
+		case 1:
 			stats.V1 = append(stats.V1, participant)
-		} else if parkrunner.Vols == 25 {
+		case 25:
 			stats.V25 = append(stats.V25, participant)
-		} else if parkrunner.Vols == 50 {
+		case 50:
 			stats.V50 = append(stats.V50, participant)
-		} else if parkrunner.Vols == 100 {
+		case 100:
 			stats.V100 = append(stats.V100, participant)
-		} else if parkrunner.Vols == 250 {
+		case 150:
+			stats.V150 = append(stats.V150, participant)
+		case 200:
+			stats.V200 = append(stats.V200, participant)
+		case 250:
 			stats.V250 = append(stats.V250, participant)
-		} else if parkrunner.Vols == 500 {
+		case 300:
+			stats.V300 = append(stats.V300, participant)
+		case 350:
+			stats.V350 = append(stats.V350, participant)
+		case 400:
+			stats.V400 = append(stats.V400, participant)
+		case 450:
+			stats.V450 = append(stats.V450, participant)
+		case 500:
 			stats.V500 = append(stats.V500, participant)
+		case 550:
+			stats.V550 = append(stats.V550, participant)
+		case 600:
+			stats.V600 = append(stats.V600, participant)
+		case 650:
+			stats.V650 = append(stats.V650, participant)
+		case 700:
+			stats.V700 = append(stats.V700, participant)
 		}
 	}
 
