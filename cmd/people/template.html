@@ -5,61 +5,56 @@
         <title>
             Alle Dietenbach parkrun Teilnehmer & Helfer
         </title>
+        <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bulma.min.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bulma.min.css">
     </head>
     <body>
+        <div id="loader" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 99999; background-color: white; display: flex; justify-content: center; align-items: center;">
+            <div>LOADING...</div>
+        </div>
+
         <section class="section">
             <div class="notification is-info">
                 <div class="content">
-                    Alle bisherigen Teilnehmer und Helfer des Dietenbach parkrun; sortiert nach Anzahl Dietenback parkrun Events.<br>
+                    Alle bisherigen Teilnehmer und Helfer des Dietenbach parkrun.<br>
                     <ul>
-                        <li>Run=Anzahl Läufe beim Dietenbach parkrun (Anzahl Läufe insgesamt)</li>
-                        <li>PB=Bestzeit beim Dietenbach parkrun</li>
-                        <li>Vol=Anzahl Helfereinsätze beim Dietenbach parkrun (Anzahl Helfereinsätze total)</li>
-                        <li>Events=Anzahl beim Dietenbach parkrun Events</li>
-                        <li>Last=Letztes Dietenbach parkrun Event</li>
+                        <li>R*/R=Anzahl Läufe beim Dietenbach parkrun/insgesamt</li>
+                        <li>PB*=Bestzeit beim Dietenbach parkrun</li>
+                        <li>V*/V=Anzahl Helfereinsätze beim Dietenbach parkrun/insgesamt</li>
+                        <li>Σ*=Anzahl Teilnahmen beim Dietenbach parkrun (als Läufer oder Helfer)</li>
+                        <li>Last*=Letzte Teilnahme beim Dietenbach parkrun</li>
                     </ul>
                 </div>
             </div>
-            <input id="filter" class="input" type="text" placeholder="Filter">
-            <table class="table is-narrow is-fullwidth is-striped">
+            <table id="table" class="table is-narrow is-fullwidth is-striped">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Id</th>
-                        <th>Run</th>
-                        <th>PB</th>
-                        <th>Vol</th>
-                        <th>Events</th>
-                        <th>Last</th>
+                        <th>Name/Id</th>
+                        <th>R*</th>
+                        <th>R</th>
+                        <th>PB*</th>
+                        <th>V*</th>
+                        <th>V</th>
+                        <th>Σ*</th>
+                        <th>Last*</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .}}
-                    <tr class="person" data-name="{{.Name}}">
-                        <td>
-                            <a href="https://www.parkrun.com.de/parkrunner/{{.Id}}" target=_blank>{{.Name}}</a>
-                        </td>
-                        <td class="is-family-monospace">
-                            <a class="showqrcode" data-name="{{.Name}}" data-id="{{.Id}}">A{{.Id}}</a>  
-                        </td>
-                        <td class="is-family-monospace">
-                            {{.Runs}} ({{.RunsAll}})
-                        </td>
-                        <td class="is-family-monospace">
-                            {{.PBStr}}
-                        </td>
-                        <td class="is-family-monospace">
-                            {{.Vols}} ({{.VolsAll}})
-                        </td>
-                        <td class="is-family-monospace">
-                            {{.Active}}
-                        </td>
-                        <td class="is-family-monospace">
-                            {{.Last.Time.Format "2006-01-02"}}/{{.Last.Index}}
-                        </td>
-                    </tr>
-                    {{end}}
+{{range .}}
+<tr data-name="{{.Name}}" data-id="{{.Id}}">
+<td><a href="https://www.parkrun.com.de/parkrunner/{{.Id}}" target=_blank>{{.Name}}</a><br><a class="showqrcode" data-name="{{.Name}}" data-id="{{.Id}}">A{{.Id}}</a></td>
+<td>{{.Runs}}</td>
+<td>{{.RunsAll}}</td>
+<td>{{.PBStr}}</td>
+<td>{{.Vols}}</td>
+<td>{{.VolsAll}}</td>
+<td>{{.Active}}</td>
+<td>{{.Last.Time.Format "2006-01-02"}}/{{.Last.Index}}</td>
+</tr>
+{{end}}
                 </tbody>
             </table>
         </section>
@@ -78,6 +73,22 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
+                var table = new DataTable("#table", {
+                    order: [[6, 'desc']],
+                    initComplete: function () {
+                        document.querySelector("#loader").remove();
+                    },
+                    createdRow: (row, data, index) => {
+                        const el = row.querySelector(".showqrcode");
+                        el.addEventListener("click", () => {
+                            document.getElementById("qrcodetitle").innerText = `${row.dataset.name} - A${row.dataset.id}`;
+                            qrcode.makeCode(`A${row.dataset.id}`);
+                            const $modal = document.getElementById("qrcodemodal");
+                            openModal($modal);
+                        });
+                    }
+                });
+
                 // Functions to open and close a modal
                 function openModal($el) {
                     $el.classList.add('is-active');
@@ -110,32 +121,6 @@
                         closeAllModals();
                     }
                 });
-
-                const filter = document.getElementById("filter"); 
-                filter.addEventListener('input', () => {
-                    const pattern = filter.value;
-                    if (pattern == "") {
-                        document.querySelectorAll(".person").forEach(el => {
-                            el.classList.remove("is-hidden");
-                        });
-                    } else {
-                        const patterns = pattern.toLowerCase().split(" ");
-                        document.querySelectorAll(".person").forEach(el => {
-                            const name = el.dataset.name.toLowerCase();
-                            allMatch = true;
-                            patterns.forEach(p => {
-                                if (!name.includes(p)) {
-                                    allMatch = false;
-                                }
-                            });
-                            if (allMatch) {
-                                el.classList.remove("is-hidden");
-                            } else {
-                                el.classList.add("is-hidden");
-                            }
-                        });
-                    }
-                });
             
                 var qrcode = new QRCode("qrcode", {
                     text: "A???",
@@ -146,6 +131,7 @@
                     correctLevel : QRCode.CorrectLevel.H
                 });
 
+                /*
                 document.querySelectorAll(".showqrcode").forEach(el => {
                     el.addEventListener("click", () => {
                         //alert(el.dataset.name);
@@ -155,6 +141,7 @@
                         openModal($modal);
                     });
                 });
+                */
             });
         </script>
     </body>

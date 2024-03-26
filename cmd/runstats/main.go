@@ -112,18 +112,42 @@ func printFancy(event *parkrun.Event, run *parkrun.Run, r500, r250, r100, r50, r
 	pi(pb, "⏱️", "Neue Bestzeiten / new PB")
 	pi(firstEvent, "🌍", "Besucher / visitors")
 	pi(r1, "⭐️", "Neue Teilnehmer / first-time runners")
-	pi(r25, "🏆", "25. run anniversary")
-	pi(r50, "🏆", "50. run anniversary")
-	pi(r100, "🏆", "100. run anniversary")
-	pi(r250, "🏆", "250. run anniversary")
-	pi(r500, "🏆", "500. run anniversary")
 	pi(len(run.Volunteers), "🦺", "Helfende / volunteers")
 	pi(v1, "⭐️", "Neue Helfende / first-time volunteers")
-	pi(v25, "🏆", "25. vol. anniversary")
-	pi(v50, "🏆", "50. vol. anniversary")
-	pi(v100, "🏆", "100. vol. anniversary")
-	pi(v250, "🏆", "250. vol. anniversary")
-	pi(v500, "🏆", "500. vol. anniversary")
+	if (r25 + r50 + r100 + r250 + r500 + v25 + v50 + v100 + v250 + v500) > 0 {
+		m := make([]string, 0)
+		if r25 > 0 {
+			m = append(m, fmt.Sprintf("%dxR25", r25))
+		}
+		if r50 > 0 {
+			m = append(m, fmt.Sprintf("%dxR50", r50))
+		}
+		if r100 > 0 {
+			m = append(m, fmt.Sprintf("%dxR100", r100))
+		}
+		if r250 > 0 {
+			m = append(m, fmt.Sprintf("%dxR250", r250))
+		}
+		if r500 > 0 {
+			m = append(m, fmt.Sprintf("%dxR500", r500))
+		}
+		if v25 > 0 {
+			m = append(m, fmt.Sprintf("%dxV25", v25))
+		}
+		if v50 > 0 {
+			m = append(m, fmt.Sprintf("%dxV50", v50))
+		}
+		if v100 > 0 {
+			m = append(m, fmt.Sprintf("%dxV100", v100))
+		}
+		if v250 > 0 {
+			m = append(m, fmt.Sprintf("%dxV250", v250))
+		}
+		if v500 > 0 {
+			m = append(m, fmt.Sprintf("%dxV500", v500))
+		}
+		ps(strings.Join(m, ", "), "🏆", "Milestones")
+	}
 	fmt.Printf("\nhttps://%s/%s/results/%d/\n", event.CountryUrl, event.Id, run.Index)
 	fmt.Println("#parkrun #running #laufen #mastodonlauftreff")
 }

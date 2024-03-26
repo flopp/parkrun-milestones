@@ -363,7 +363,6 @@ func (event *Event) GetStats() *EventStats {
 		panic(err)
 	}
 
-	fmt.Printf("Collating Running Milestones")
 	stats := EventStats{}
 	for _, participant := range run.Runners {
 		if participant.Achievement == AchievementFirst {
@@ -408,7 +407,7 @@ func (event *Event) GetStats() *EventStats {
 			stats.R700 = append(stats.R700, participant)
 		}
 	}
-	fmt.Printf("Collating Volunteer Milestones")
+
 	for _, participant := range run.Volunteers {
 		parkrunner := &Parkrunner{participant.Id, participant.Name, "??", run.Time, -1, -1, -1, nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {

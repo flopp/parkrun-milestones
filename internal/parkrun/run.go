@@ -70,8 +70,9 @@ func ParseAchievement(s string, country string) (AchievementEnum, error) {
 	}
 
 	var first = [...]string{
-		"First Timer!",     // UK, SA, CA, US, NZ, IE, MY, AUS
-		"Erstläufer!",      // Germany
+		"First Timer!", // UK, SA, CA, US, NZ, IE, MY, AUS
+		"Erstläufer!",  // Germany
+		"Erstteilnahme!",
 		"Première perf' !", // France
 		"Prima volta!",     // Italy
 		"Debut!",           // Sweden
@@ -128,6 +129,7 @@ func CreateRun(parent *Event, index uint64, t time.Time, nFinishers, nVolunteers
 	return &Run{parent, index, t, false, time.Time{}, nFinishers, nVolunteers, nil, nil}
 }
 
+var patternDateIndex = regexp.MustCompile(`<h3><span class="format-date">([^<]+)</span><span class="spacer"> | </span><span>#([0-9]+)</span></h3>`)
 var patternRunnerRow0 = regexp.MustCompile(`<tr class="Results-table-row" [^<]*><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact">(<a href="[^"]*/\d+")?.*?</tr>`)
 var patternRunnerRow = regexp.MustCompile(`^<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="([^"]*)" data-club="[^"]*" data-gender="[^"]*" data-position="\d+" data-runs="(\d+)" data-vols="(\d+)" data-agegrade="[^"]*" data-achievement="([^"]*)"><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact"><a href="[^"]*/(\d+)"`)
 var patternRunnerRowUnknown = regexp.MustCompile(`^<tr class="Results-table-row" data-name="([^"]*)" data-agegroup="" data-club="" data-position="\d+" data-runs="0" data-agegrade="0" data-achievement=""><td class="Results-table-td Results-table-td--position">\d+</td><td class="Results-table-td Results-table-td--name"><div class="compact">.*`)
