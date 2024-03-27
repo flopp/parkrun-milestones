@@ -1,13 +1,12 @@
 .PHONY: build
 build: 
-	go build -o parkrun-events cmd/events/main.go
-	go build -o parkrun-milestones cmd/milestones/main.go
-	go build -o parkrun-runstats cmd/runstats/main.go
-	go build -o parkrun-webgen cmd/webgen/main.go
-	go build -o parkrun-year cmd/year/main.go
-	go build -o parkrun-graphs cmd/graphs/main.go
-	go build -o parkrun-people cmd/people/main.go
-	go build -o freiburg-temp cmd/freiburgtemp/main.go
+	mkdir -p .bin
+	go build -o .bin/parkrun-events cmd/events/main.go
+	go build -o .bin/parkrun-milestones cmd/milestones/main.go
+	go build -o .bin/parkrun-runstats cmd/runstats/main.go
+	go build -o .bin/parkrun-webgen cmd/webgen/main.go
+	go build -o .bin/parkrun-year cmd/year/main.go
+	go build -o .bin/parkrun-people cmd/people/main.go
 
 .PHONY: vet
 vet:
