@@ -19,7 +19,21 @@ type Parkrunner struct {
 }
 
 func Milestone(number int64) bool {
-	return number == 25 || number == 50 || number == 100 || number == 250 || number == 500
+	return number == 25 ||
+		number == 50 ||
+		number == 100 ||
+		number == 150 ||
+		number == 200 ||
+		number == 250 ||
+		number == 300 ||
+		number == 350 ||
+		number == 400 ||
+		number == 450 ||
+		number == 500 ||
+		number == 550 ||
+		number == 600 ||
+		number == 650 ||
+		number == 700
 }
 
 func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string, ageGroup string, dataTime time.Time, runs int64, juniorRuns int64, vols int64, runIndex uint64) map[string]*Parkrunner {
