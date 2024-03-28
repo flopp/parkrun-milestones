@@ -36,7 +36,8 @@ type Participant struct {
 
 var reAgeGroup1 = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+-\d+)$`)
 var reAgeGroup2 = regexp.MustCompile(`^[A-Z]([fFmMwW])(\d+)$`)
-var reAgeGroup3 = regexp.MustCompile(`^([fFmMwW])(WC)$`)
+var reAgeGroup3 = regexp.MustCompile(`^[A-Z]([fFmMwW])(---)$`)
+var reAgeGroup4 = regexp.MustCompile(`^([fFmMwW])(WC)$`)
 
 func ParseAgeGroup(s string) (string, int, error) {
 	if s == "" {
@@ -55,6 +56,12 @@ func ParseAgeGroup(s string) (string, int, error) {
 		return match[2], SEX_MALE, nil
 	}
 	if match := reAgeGroup3.FindStringSubmatch(s); match != nil {
+		if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
+			return match[2], SEX_FEMALE, nil
+		}
+		return match[2], SEX_MALE, nil
+	}
+	if match := reAgeGroup4.FindStringSubmatch(s); match != nil {
 		if match[1] == "f" || match[1] == "F" || match[1] == "w" || match[1] == "W" {
 			return match[2], SEX_FEMALE, nil
 		}
