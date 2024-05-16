@@ -155,8 +155,15 @@ func (event *Event) IsJuniorParkrun() bool {
 	return strings.HasSuffix(event.Id, "-juniors")
 }
 
+func parseDate(s string) (time.Time, error) {
+	if t, err := time.Parse("02/01/2006", s); err == nil {
+		return t, nil
+	}
+	return time.Parse("2006-01-02", s)
+}
+
 var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
-var patternRunRow = regexp.MustCompile(`<tr class="Results-table-row" data-parkrun="(\d+)" data-date="(\d+/\d+/\d+)" data-finishers="(\d+)" data-volunteers="(\d+)" data-male="([^"]*)" data-female="([^"]*)" data-maletime="(\d*)" data-femaletime="(\d*)">`)
+var patternRunRow = regexp.MustCompile(`<tr class="Results-table-row" data-parkrun="(\d+)" data-date="([^"]*)" data-finishers="(\d+)" data-volunteers="(\d+)" data-male="([^"]*)" data-female="([^"]*)" data-maletime="(\d*)" data-femaletime="(\d*)">`)
 
 func (event *Event) Complete() error {
 	if event.IsComplete {
@@ -195,7 +202,7 @@ func (event *Event) Complete() error {
 			return fmt.Errorf("%s: invalid run index: %s", event.Id, match[1])
 		}
 
-		date, err := time.Parse("02/01/2006", match[2])
+		date, err := parseDate(match[2])
 		if err != nil {
 			return fmt.Errorf("%s: invalid date: %s (%v)", event.Id, match[2], err)
 		}
