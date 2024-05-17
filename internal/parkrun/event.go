@@ -1,7 +1,6 @@
 package parkrun
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -9,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/biter777/countries"
+	"github.com/flopp/go-parkrunparser"
 )
 
 type Event struct {
@@ -25,114 +24,26 @@ func (event Event) NumberOfRuns() int {
 	return len(event.Runs)
 }
 
-var byTLD map[string]string = nil
-var patternCountryUrl = regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
-
-func lookupCountry(url string) (string, error) {
-	match := patternCountryUrl.FindStringSubmatch(url)
-	if match == nil {
-		return "", fmt.Errorf("cannot extract TLD from %s", url)
-	}
-	tld := match[1]
-
-	if len(byTLD) == 0 {
-		byTLD = make(map[string]string)
-		for _, countryCode := range countries.All() {
-			byTLD[countryCode.Domain().String()] = countryCode.String()
-		}
-	}
-
-	country, ok := byTLD[tld]
-	if !ok {
-		return "", fmt.Errorf("cannot determine country for %s (TLD=%s)", url, tld)
-	}
-	return country, nil
-}
-
 func AllEvents() ([]*Event, error) {
 	buf, _, err := DownloadAndRead("https://images.parkrun.com/events.json", "events.json")
 	if err != nil {
 		return nil, err
 	}
 
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(buf), &result); err != nil {
+	parsed_events, err := parkrunparser.ParseEvents([]byte(buf))
+	if err != nil {
 		return nil, err
 	}
 
-	countriesI, ok := result["countries"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'countries' from 'events.json")
-	}
-	countries := countriesI.(map[string]interface{})
-
-	countryLookup := make(map[string]string)
-	for countryId, countryI := range countries {
-		country := countryI.(map[string]interface{})
-
-		urlI, ok := country["url"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'countries/%s/url' from 'events.json", countryId)
-		}
-
-		if urlI != nil {
-			countryLookup[countryId] = urlI.(string)
-		}
-	}
-
-	eventsI, ok := result["events"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'events' from 'events.json")
-	}
-	events := eventsI.(map[string]interface{})
-
-	featuresI, ok := events["features"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'events/features' from 'events.json")
-	}
-
 	eventList := make([]*Event, 0)
-	features := featuresI.([]interface{})
-	for _, featureI := range features {
-		feature := featureI.(map[string]interface{})
-		propertiesI, ok := feature["properties"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties' from 'events.json")
-		}
-
-		properties := propertiesI.(map[string]interface{})
-		idI, ok := properties["eventname"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/eventname' from 'events.json")
-		}
-		nameI, ok := properties["EventLongName"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/EventLongName' from 'events.json")
-		}
-		countryCodeI, ok := properties["countrycode"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/countrycode' from 'events.json")
-		}
-		eventId := idI.(string)
-		eventName := nameI.(string)
-		countryCode := fmt.Sprintf("%.0f", countryCodeI.(float64))
-
-		countryUrl, ok := countryLookup[countryCode]
-		if !ok {
-			return nil, fmt.Errorf("cannot get URL of contry '%s'", countryCode)
-		}
-
-		country, err := lookupCountry(countryUrl)
-		if err != nil {
-			country = "<UNKNOWN>"
-		}
-
-		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country, false, nil})
+	for _, e := range parsed_events.Events {
+		eventList = append(eventList, &Event{e.Name, e.LongName, e.Country.Url, e.Country.Name(), false, nil})
 	}
 
 	sort.Slice(eventList, func(i, j int) bool {
 		return eventList[i].Id < eventList[j].Id
 	})
+
 	return eventList, nil
 }
 

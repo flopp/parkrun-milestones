@@ -194,7 +194,7 @@ func printTable(event *parkrun.Event, run *parkrun.Run) {
 	fmt.Println("\nVolunteers")
 	fmt.Println("Name;Total Volunteerings")
 	for _, participant := range run.Volunteers {
-		parkrunner := &parkrun.Parkrunner{participant.Id, participant.Name, "??", run.Time, -1, -1, -1, nil}
+		parkrunner := &parkrun.Parkrunner{Id: participant.Id, Name: participant.Name, AgeGroup: "??", DataTime: run.Time, Runs: -1, JuniorRuns: -1, Vols: -1, Active: nil}
 		if err := parkrunner.FetchMissingStats(run.Time); err != nil {
 			panic(err)
 		}
