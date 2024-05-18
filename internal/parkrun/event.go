@@ -2,11 +2,8 @@ package parkrun
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/flopp/go-parkrunparser"
 )
@@ -66,16 +63,6 @@ func (event *Event) IsJuniorParkrun() bool {
 	return strings.HasSuffix(event.Id, "-juniors")
 }
 
-func parseDate(s string) (time.Time, error) {
-	if t, err := time.Parse("02/01/2006", s); err == nil {
-		return t, nil
-	}
-	return time.Parse("2006-01-02", s)
-}
-
-var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
-var patternRunRow = regexp.MustCompile(`<tr class="Results-table-row" data-parkrun="(\d+)" data-date="([^"]*)" data-finishers="(\d+)" data-volunteers="(\d+)" data-male="([^"]*)" data-female="([^"]*)" data-maletime="(\d*)" data-femaletime="(\d*)">`)
-
 func (event *Event) Complete() error {
 	if event.IsComplete {
 		return nil
@@ -88,56 +75,14 @@ func (event *Event) Complete() error {
 		return err
 	}
 
-	match := patternNumberOfRuns.FindStringSubmatch(buf)
-	if match == nil {
-		event.IsComplete = true
-		return nil
-	}
-
-	count, err := strconv.Atoi(match[1])
+	eventhistory, err := parkrunparser.ParseEventHistory([]byte(buf))
 	if err != nil {
-		return err
-	}
-	if count < 0 {
-		return fmt.Errorf("%s: invalid number of runs: %s", event.Id, match[1])
+		return fmt.Errorf("while parsing eventhistory of %s from %s: %w", event.Id, fileName, err)
 	}
 
-	event.Runs = make([]*Run, count)
-	matches := patternRunRow.FindAllStringSubmatch(buf, -1)
-	for _, match := range matches {
-		index, err := strconv.Atoi(match[1])
-		if err != nil {
-			return err
-		}
-		if index <= 0 || index > count {
-			return fmt.Errorf("%s: invalid run index: %s", event.Id, match[1])
-		}
-
-		date, err := parseDate(match[2])
-		if err != nil {
-			return fmt.Errorf("%s: invalid date: %s (%v)", event.Id, match[2], err)
-		}
-
-		finishers, err := strconv.Atoi(match[3])
-		if err != nil {
-			return err
-		}
-
-		volunteers, err := strconv.Atoi(match[4])
-		if err != nil {
-			return err
-		}
-
-		if event.Runs[index-1] != nil {
-			return fmt.Errorf("%s: duplicate run #%d", event.Id, index)
-		}
-		event.Runs[index-1] = CreateRun(event, uint64(index), date, uint64(finishers), uint64(volunteers))
-	}
-
-	for index, run := range event.Runs {
-		if run == nil {
-			return fmt.Errorf("%s: missing run #%d", event.Id, index+1)
-		}
+	event.Runs = make([]*Run, len(eventhistory.Results))
+	for _, result := range eventhistory.Results {
+		event.Runs[result.Index-1] = CreateRun(event, uint64(result.Index), result.Date, uint64(result.NumberOfFinishers), uint64(result.NumberOfVolunteers))
 	}
 
 	event.IsComplete = true
