@@ -2,11 +2,10 @@ package parkrun
 
 import (
 	"fmt"
-	"html"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/flopp/go-parkrunparser"
 )
 
 type AchievementEnum int64
@@ -155,70 +154,32 @@ func (run *Run) Complete() error {
 	if err != nil {
 		return err
 	}
-	reNewline := regexp.MustCompile(`\r?\n`)
-	buf = reNewline.ReplaceAllString(buf, " ")
+
+	results, err := parkrunparser.ParseResults([]byte(buf))
+	if err != nil {
+		return fmt.Errorf("while parsing results for %s from %s: %w", event.Id, fileName, err)
+	}
 
 	run.IsComplete = true
 	run.DataTime = dataTime
-
-	matchesR0 := patternRunnerRow0.FindAllStringSubmatch(buf, -1)
-	for _, match0 := range matchesR0 {
-		if match := patternRunnerRow.FindStringSubmatch(match0[0]); match != nil {
-			name := html.UnescapeString(match[1])
-
-			ageGroup, sex, err := ParseAgeGroup(match[2])
-			if err != nil {
-				return err
-			}
-
-			runs, err := strconv.Atoi(match[3])
-			if err != nil {
-				return err
-			}
-
-			vols, err := strconv.Atoi(match[4])
-			if err != nil {
-				return err
-			}
-
-			achievement, err := ParseAchievement(match[5], run.Parent.Country)
-			if err != nil {
-				return err
-			}
-
-			id := match[6]
-
-			var runTime time.Duration = 0
-			if matchTime := patternTime.FindStringSubmatch(match0[0]); matchTime != nil {
-				split := strings.Split(matchTime[1], ":")
-				if len(split) == 3 {
-					t, err := time.ParseDuration(fmt.Sprintf("%sh%sm%ss", split[0], split[1], split[2]))
-					if err != nil {
-						panic(err)
-					}
-					runTime = t
-				} else if len(split) == 2 {
-					t, err := time.ParseDuration(fmt.Sprintf("%sm%ss", split[0], split[1]))
-					if err != nil {
-						panic(err)
-					}
-					runTime = t
-				} else {
-					panic(fmt.Errorf("cannot parse duration: %s", matchTime[1]))
-				}
-			}
-
-			run.Runners = append(run.Runners, &Participant{id, name, ageGroup, sex, int64(runs), int64(vols), runTime, achievement})
-			continue
+	for _, finisher := range results.Finishers {
+		sex := SEX_UNKNOWN
+		switch finisher.AgeGroup.Sex {
+		case parkrunparser.SEX_FEMALE:
+			sex = SEX_FEMALE
+		case parkrunparser.SEX_MALE:
+			sex = SEX_MALE
 		}
-
-		if match := patternRunnerRowUnknown.FindStringSubmatch(match0[0]); match != nil {
-			name := html.UnescapeString(match[1])
-			run.Runners = append(run.Runners, &Participant{"", name, "??", SEX_UNKNOWN, 0, 0, 0, AchievementNone})
-			continue
+		achievement := AchievementNone
+		switch finisher.Achievement {
+		case parkrunparser.AchievementFirst:
+			achievement = AchievementFirst
+		case parkrunparser.AchievementPB:
+			achievement = AchievementPB
 		}
-
-		return fmt.Errorf("cannot parse table row: %s", match0[0])
+		runs := 0
+		vols := 0
+		run.Runners = append(run.Runners, &Participant{finisher.Id, finisher.Name, finisher.AgeGroup.Name, sex, int64(runs), int64(vols), finisher.Time, achievement})
 	}
 
 	var runnerWithTime *Participant = nil
@@ -238,12 +199,8 @@ func (run *Run) Complete() error {
 		}
 	}
 
-	matchesV := patternVolunteerRow.FindAllStringSubmatch(buf, -1)
-	for _, match := range matchesV {
-		id := match[1]
-		name := html.UnescapeString(match[2])
-
-		run.Volunteers = append(run.Volunteers, &Participant{id, name, "??", SEX_UNKNOWN, -1, -1, 0, AchievementNone})
+	for _, volunteer := range results.Volunteers {
+		run.Volunteers = append(run.Volunteers, &Participant{volunteer.Id, volunteer.Name, "??", SEX_UNKNOWN, -1, -1, 0, AchievementNone})
 	}
 
 	return nil
