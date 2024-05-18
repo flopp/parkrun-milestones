@@ -1,15 +1,11 @@
 package parkrun
 
 import (
-	"encoding/json"
 	"fmt"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/biter777/countries"
+	"github.com/flopp/go-parkrunparser"
 )
 
 type Event struct {
@@ -25,114 +21,26 @@ func (event Event) NumberOfRuns() int {
 	return len(event.Runs)
 }
 
-var byTLD map[string]string = nil
-var patternCountryUrl = regexp.MustCompile(`^www\.parkrun.*(\.[^.]+)$`)
-
-func lookupCountry(url string) (string, error) {
-	match := patternCountryUrl.FindStringSubmatch(url)
-	if match == nil {
-		return "", fmt.Errorf("cannot extract TLD from %s", url)
-	}
-	tld := match[1]
-
-	if len(byTLD) == 0 {
-		byTLD = make(map[string]string)
-		for _, countryCode := range countries.All() {
-			byTLD[countryCode.Domain().String()] = countryCode.String()
-		}
-	}
-
-	country, ok := byTLD[tld]
-	if !ok {
-		return "", fmt.Errorf("cannot determine country for %s (TLD=%s)", url, tld)
-	}
-	return country, nil
-}
-
 func AllEvents() ([]*Event, error) {
 	buf, _, err := DownloadAndRead("https://images.parkrun.com/events.json", "events.json")
 	if err != nil {
 		return nil, err
 	}
 
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(buf), &result); err != nil {
+	parsed_events, err := parkrunparser.ParseEvents([]byte(buf))
+	if err != nil {
 		return nil, err
 	}
 
-	countriesI, ok := result["countries"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'countries' from 'events.json")
-	}
-	countries := countriesI.(map[string]interface{})
-
-	countryLookup := make(map[string]string)
-	for countryId, countryI := range countries {
-		country := countryI.(map[string]interface{})
-
-		urlI, ok := country["url"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'countries/%s/url' from 'events.json", countryId)
-		}
-
-		if urlI != nil {
-			countryLookup[countryId] = urlI.(string)
-		}
-	}
-
-	eventsI, ok := result["events"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'events' from 'events.json")
-	}
-	events := eventsI.(map[string]interface{})
-
-	featuresI, ok := events["features"]
-	if !ok {
-		return nil, fmt.Errorf("cannot get 'events/features' from 'events.json")
-	}
-
 	eventList := make([]*Event, 0)
-	features := featuresI.([]interface{})
-	for _, featureI := range features {
-		feature := featureI.(map[string]interface{})
-		propertiesI, ok := feature["properties"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties' from 'events.json")
-		}
-
-		properties := propertiesI.(map[string]interface{})
-		idI, ok := properties["eventname"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/eventname' from 'events.json")
-		}
-		nameI, ok := properties["EventLongName"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/EventLongName' from 'events.json")
-		}
-		countryCodeI, ok := properties["countrycode"]
-		if !ok {
-			return nil, fmt.Errorf("cannot get 'events/features/properties/countrycode' from 'events.json")
-		}
-		eventId := idI.(string)
-		eventName := nameI.(string)
-		countryCode := fmt.Sprintf("%.0f", countryCodeI.(float64))
-
-		countryUrl, ok := countryLookup[countryCode]
-		if !ok {
-			return nil, fmt.Errorf("cannot get URL of contry '%s'", countryCode)
-		}
-
-		country, err := lookupCountry(countryUrl)
-		if err != nil {
-			country = "<UNKNOWN>"
-		}
-
-		eventList = append(eventList, &Event{eventId, eventName, countryUrl, country, false, nil})
+	for _, e := range parsed_events.Events {
+		eventList = append(eventList, &Event{e.Name, e.LongName, e.Country.Url, e.Country.Name(), false, nil})
 	}
 
 	sort.Slice(eventList, func(i, j int) bool {
 		return eventList[i].Id < eventList[j].Id
 	})
+
 	return eventList, nil
 }
 
@@ -155,16 +63,6 @@ func (event *Event) IsJuniorParkrun() bool {
 	return strings.HasSuffix(event.Id, "-juniors")
 }
 
-func parseDate(s string) (time.Time, error) {
-	if t, err := time.Parse("02/01/2006", s); err == nil {
-		return t, nil
-	}
-	return time.Parse("2006-01-02", s)
-}
-
-var patternNumberOfRuns = regexp.MustCompile("<td class=\"Results-table-td Results-table-td--position\"><a href=\"\\.\\./(\\d+)\">(\\d+)</a></td>")
-var patternRunRow = regexp.MustCompile(`<tr class="Results-table-row" data-parkrun="(\d+)" data-date="([^"]*)" data-finishers="(\d+)" data-volunteers="(\d+)" data-male="([^"]*)" data-female="([^"]*)" data-maletime="(\d*)" data-femaletime="(\d*)">`)
-
 func (event *Event) Complete() error {
 	if event.IsComplete {
 		return nil
@@ -177,56 +75,14 @@ func (event *Event) Complete() error {
 		return err
 	}
 
-	match := patternNumberOfRuns.FindStringSubmatch(buf)
-	if match == nil {
-		event.IsComplete = true
-		return nil
-	}
-
-	count, err := strconv.Atoi(match[1])
+	eventhistory, err := parkrunparser.ParseEventHistory([]byte(buf))
 	if err != nil {
-		return err
-	}
-	if count < 0 {
-		return fmt.Errorf("%s: invalid number of runs: %s", event.Id, match[1])
+		return fmt.Errorf("while parsing eventhistory of %s from %s: %w", event.Id, fileName, err)
 	}
 
-	event.Runs = make([]*Run, count)
-	matches := patternRunRow.FindAllStringSubmatch(buf, -1)
-	for _, match := range matches {
-		index, err := strconv.Atoi(match[1])
-		if err != nil {
-			return err
-		}
-		if index <= 0 || index > count {
-			return fmt.Errorf("%s: invalid run index: %s", event.Id, match[1])
-		}
-
-		date, err := parseDate(match[2])
-		if err != nil {
-			return fmt.Errorf("%s: invalid date: %s (%v)", event.Id, match[2], err)
-		}
-
-		finishers, err := strconv.Atoi(match[3])
-		if err != nil {
-			return err
-		}
-
-		volunteers, err := strconv.Atoi(match[4])
-		if err != nil {
-			return err
-		}
-
-		if event.Runs[index-1] != nil {
-			return fmt.Errorf("%s: duplicate run #%d", event.Id, index)
-		}
-		event.Runs[index-1] = CreateRun(event, uint64(index), date, uint64(finishers), uint64(volunteers))
-	}
-
-	for index, run := range event.Runs {
-		if run == nil {
-			return fmt.Errorf("%s: missing run #%d", event.Id, index+1)
-		}
+	event.Runs = make([]*Run, len(eventhistory.Results))
+	for _, result := range eventhistory.Results {
+		event.Runs[result.Index-1] = CreateRun(event, uint64(result.Index), result.Date, uint64(result.NumberOfFinishers), uint64(result.NumberOfVolunteers))
 	}
 
 	event.IsComplete = true
