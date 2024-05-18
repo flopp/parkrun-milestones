@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/flopp/go-parkrunparser v0.0.0-20240518175729-447458fc72e8 h1:WIAlSzGq2GMmrLV7LzRVLBF8btuM7EGwIG+Gy2enIV8=
+github.com/flopp/go-parkrunparser v0.0.0-20240518175729-447458fc72e8/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/flopp/go-parkrunparser v0.0.0-20240518181137-752780f67f9e h1:6vP45K/yJS7aV8u3JmApE6Cjg8QXnOKuOhal1I0EEqg=
 github.com/flopp/go-parkrunparser v0.0.0-20240518181137-752780f67f9e/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/jedib0t/go-pretty/v6 v6.5.9 h1:ACteMBRrrmm1gMsXe9PSTOClQ63IXDUt03H5U+UV8OU=
