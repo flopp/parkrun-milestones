@@ -228,13 +228,13 @@ func (event *Event) GetStats() *EventStats {
 
 	stats := EventStats{}
 	for _, participant := range run.Runners {
-		if participant.Achievement == AchievementFirst {
+		if participant.Achievement == parkrunparser.AchievementFirst {
 			if participant.Runs == 1 {
 				stats.R1 = append(stats.R1, participant)
 			} else {
 				stats.FirstEvent = append(stats.FirstEvent, participant)
 			}
-		} else if participant.Achievement == AchievementPB {
+		} else if participant.Achievement == parkrunparser.AchievementPB {
 			stats.PB = append(stats.PB, participant)
 		}
 		switch participant.Runs {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flopp/go-parkrunparser"
 	parkrun "github.com/flopp/parkrun-milestones/internal/parkrun"
 )
 
@@ -178,13 +179,13 @@ func printTable(event *parkrun.Event, run *parkrun.Run) {
 			fmt.Printf("n/a;n/a;n/a;")
 		}
 
-		if participant.Achievement == parkrun.AchievementFirst {
+		if participant.Achievement == parkrunparser.AchievementFirst {
 			if participant.Runs == 1 {
 				fmt.Printf("first parkrun")
 			} else {
 				fmt.Printf("first time at %s", event.Name)
 			}
-		} else if participant.Achievement == parkrun.AchievementPB {
+		} else if participant.Achievement == parkrunparser.AchievementPB {
 			fmt.Printf("new personal best at %s", event.Name)
 		}
 

@@ -162,7 +162,7 @@ func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
 		return err
 	}
 
-	r, j, v, err := ExtractData(buf)
+	r, j, v, err := ExtractData(string(buf))
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func GetParkrunnerCountry(id string, eventCountries map[string]string) (string, 
 	}
 
 	counts := make(map[string]int)
-	for _, match := range reParkrunnerEvent.FindAllStringSubmatch(buf, -1) {
+	for _, match := range reParkrunnerEvent.FindAllStringSubmatch(string(buf), -1) {
 		eventId := match[1]
 		count, err := strconv.Atoi(match[2])
 		if err != nil {

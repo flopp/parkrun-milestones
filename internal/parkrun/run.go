@@ -7,29 +7,15 @@ import (
 	"github.com/flopp/go-parkrunparser"
 )
 
-type AchievementEnum int64
-
-const (
-	AchievementNone AchievementEnum = iota
-	AchievementFirst
-	AchievementPB
-)
-
-const (
-	SEX_UNKNOWN = iota
-	SEX_FEMALE
-	SEX_MALE
-)
-
 type Participant struct {
 	Id          string
 	Name        string
 	AgeGroup    string
-	Sex         int
+	Sex         parkrunparser.Sex
 	Runs        int64
 	Vols        int64
 	Time        time.Duration
-	Achievement AchievementEnum
+	Achievement parkrunparser.Achievement
 }
 
 type Run struct {
@@ -69,22 +55,7 @@ func (run *Run) Complete() error {
 	run.IsComplete = true
 	run.DataTime = dataTime
 	for _, finisher := range results.Finishers {
-		sex := SEX_UNKNOWN
-		switch finisher.AgeGroup.Sex {
-		case parkrunparser.SEX_FEMALE:
-			sex = SEX_FEMALE
-		case parkrunparser.SEX_MALE:
-			sex = SEX_MALE
-		}
-		achievement := AchievementNone
-		switch finisher.Achievement {
-		case parkrunparser.AchievementFirst:
-			achievement = AchievementFirst
-		case parkrunparser.AchievementPB:
-			achievement = AchievementPB
-		}
-
-		run.Runners = append(run.Runners, &Participant{finisher.Id, finisher.Name, finisher.AgeGroup.Name, sex, int64(finisher.NumberOfRuns), int64(finisher.NumberOfVolunteerings), finisher.Time, achievement})
+		run.Runners = append(run.Runners, &Participant{finisher.Id, finisher.Name, finisher.AgeGroup.Name, finisher.AgeGroup.Sex, int64(finisher.NumberOfRuns), int64(finisher.NumberOfVolunteerings), finisher.Time, finisher.Achievement})
 	}
 
 	var runnerWithTime *Participant = nil
@@ -105,7 +76,7 @@ func (run *Run) Complete() error {
 	}
 
 	for _, volunteer := range results.Volunteers {
-		run.Volunteers = append(run.Volunteers, &Participant{volunteer.Id, volunteer.Name, "??", SEX_UNKNOWN, -1, -1, 0, AchievementNone})
+		run.Volunteers = append(run.Volunteers, &Participant{volunteer.Id, volunteer.Name, "??", parkrunparser.SEX_UNKNOWN, -1, -1, 0, parkrunparser.AchievementNone})
 	}
 
 	return nil

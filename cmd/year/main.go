@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flopp/go-parkrunparser"
 	parkrun "github.com/flopp/parkrun-milestones/internal/parkrun"
 )
 
@@ -198,9 +199,9 @@ func main() {
 				count_time += 1
 			}
 
-			if p.Sex == parkrun.SEX_FEMALE {
+			if p.Sex == parkrunparser.SEX_FEMALE {
 				sex_female += 1
-			} else if p.Sex == parkrun.SEX_MALE {
+			} else if p.Sex == parkrunparser.SEX_MALE {
 				sex_male += 1
 			} else {
 				sex_unknown += 1
