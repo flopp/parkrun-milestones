@@ -2,6 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/flopp/go-parkrunparser v0.0.0-20240518181137-752780f67f9e h1:6vP45K/yJS7aV8u3JmApE6Cjg8QXnOKuOhal1I0EEqg=
 github.com/flopp/go-parkrunparser v0.0.0-20240518181137-752780f67f9e/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
+github.com/flopp/go-parkrunparser v0.0.0-20241213184743-ae4f63576e2c h1:f9jMKex4q0Z8DIsI0Z7GfsCt4AlvFx/Yv2FI1CsMqiA=
+github.com/flopp/go-parkrunparser v0.0.0-20241213184743-ae4f63576e2c/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/jedib0t/go-pretty/v6 v6.5.9 h1:ACteMBRrrmm1gMsXe9PSTOClQ63IXDUt03H5U+UV8OU=
 github.com/jedib0t/go-pretty/v6 v6.5.9/go.mod h1:zbn98qrYlh95FIhwwsbIip0LYpwSG8SUOScs+v9/t0E=
 github.com/jedib0t/go-pretty/v6 v6.6.2 h1:27bLj3nRODzaiA7tPIxy9UVWHoPspFfME9XxgwiiNsM=
