@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	usage = `USAGE: %s [OPTIONS...] EVENTID YEAR
+	usage = `USAGE: %s [OPTIONS...] EVENTID [YEAR]
 Show year statistics.
 
 OPTIONS:
@@ -39,7 +39,9 @@ func parseCommandLine() CommandLineOptions {
 	if len(flag.Args()) == 2 {
 		year, err := strconv.Atoi(flag.Args()[1])
 		if err != nil {
-			panic(err)
+			flag.Usage()
+			os.Exit(1)
+			return CommandLineOptions{}
 		}
 		return CommandLineOptions{
 			*forceReload, flag.Args()[0], year,
@@ -49,7 +51,9 @@ func parseCommandLine() CommandLineOptions {
 			*forceReload, flag.Args()[0], 0,
 		}
 	} else {
-		panic("bad command line")
+		flag.Usage()
+		os.Exit(1)
+		return CommandLineOptions{}
 	}
 }
 
@@ -231,7 +235,7 @@ func main() {
 		}
 		sum_volunteers += v
 
-		for id, _ := range rv {
+		for id := range rv {
 			runVol[id] += 1
 		}
 	}
