@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.23.4
 
 require (
-	github.com/flopp/go-parkrunparser v0.0.0-20241230085952-ece4ad0d7640
+	github.com/flopp/go-parkrunparser v0.0.0-20241230154122-79943bd455bb
 	github.com/jedib0t/go-pretty/v6 v6.6.5
 )
 
