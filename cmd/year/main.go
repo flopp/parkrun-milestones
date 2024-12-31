@@ -23,13 +23,15 @@ OPTIONS:
 )
 
 type CommandLineOptions struct {
-	forceReload bool
-	eventId     string
-	year        int
+	forceReload    bool
+	eventId        string
+	year           int
+	guestCountries bool
 }
 
 func parseCommandLine() CommandLineOptions {
 	forceReload := flag.Bool("force", false, "force reload of all data")
+	guestCountries := flag.Bool("guestcountries", false, "determine guest countries (may take some time)")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usage, os.Args[0])
 		flag.PrintDefaults()
@@ -44,11 +46,11 @@ func parseCommandLine() CommandLineOptions {
 			return CommandLineOptions{}
 		}
 		return CommandLineOptions{
-			*forceReload, flag.Args()[0], year,
+			*forceReload, flag.Args()[0], year, *guestCountries,
 		}
 	} else if len(flag.Args()) == 1 {
 		return CommandLineOptions{
-			*forceReload, flag.Args()[0], 0,
+			*forceReload, flag.Args()[0], 0, *guestCountries,
 		}
 	} else {
 		flag.Usage()
@@ -365,27 +367,37 @@ func main() {
 		}
 
 		if count_id.Count <= total_count/4 {
-			//fmt.Printf("guest: %s (%d %d)\n", count_id.Id, count_id.Count, total_count)
-			country, err := parkrun.GetParkrunnerCountry(count_id.Id, eventCountries)
-			if err != nil {
-				panic(err)
+			if options.guestCountries {
+				country, err := parkrun.GetParkrunnerCountry(count_id.Id, eventCountries)
+				if err != nil {
+					panic(err)
+				}
+				countryCounts[country] += count_id.Count
 			}
-			//fmt.Println(country)
-			countryCounts[country] += count_id.Count
 			guests += count_id.Count
 		}
 	}
 	fmt.Printf("\nGUESTS:\n%d\n", guests)
-	fmt.Println("\nGUEST COUNTRIES:")
-	for country, count := range countryCounts {
-		fmt.Printf("%s;%d\n", country, count)
+	if options.guestCountries {
+		fmt.Println("\nGUEST COUNTRIES:")
+		for country, count := range countryCounts {
+			fmt.Printf("%s;%d\n", country, count)
+		}
 	}
 
 	fmt.Println("\nRUN TIMES:")
 	fmt.Printf("min=%v\n", min_time)
 	fmt.Printf("max=%v\n", max_time)
 	fmt.Printf("avg=%v\n", time.Duration(1000000000.0*sum_time.Seconds()/float64(count_time)))
-	for t, count := range time_bins {
+	times := make([]int, 0, len(time_bins))
+	for t, _ := range time_bins {
+		times = append(times, t)
+	}
+	sort.Ints(times)
+
+	fmt.Println("\nRUN TIME (MINUTES);COUNT")
+	for _, t := range times {
+		count := time_bins[t]
 		fmt.Printf("%d;%d\n", t, count)
 	}
 
@@ -401,7 +413,7 @@ func main() {
 		name := p.Name
 		a := strings.Split(name, " ")
 		if len(a) < 2 {
-			fmt.Println(name)
+			//fmt.Println(name)
 		} else {
 			firstnames_count[a[0]] += 1
 		}
@@ -419,7 +431,8 @@ func main() {
 	sort.Slice(firstnames, func(i, j int) bool {
 		return firstnames[i].i >= firstnames[j].i
 	})
+	fmt.Println("\nNAME;COUNT")
 	for _, n := range firstnames {
-		fmt.Printf("%s %d\n", n.s, n.i)
+		fmt.Printf("%s;%d\n", n.s, n.i)
 	}
 }
