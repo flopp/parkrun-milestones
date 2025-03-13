@@ -10,6 +10,8 @@ github.com/flopp/go-parkrunparser v0.0.0-20241230085952-ece4ad0d7640 h1:NFQkXVPE
 github.com/flopp/go-parkrunparser v0.0.0-20241230085952-ece4ad0d7640/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/flopp/go-parkrunparser v0.0.0-20241230154122-79943bd455bb h1:P2sRcKxciJ/EzlL0rzAgSj0unDmYBTiv3pzWiVZy24M=
 github.com/flopp/go-parkrunparser v0.0.0-20241230154122-79943bd455bb/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
+github.com/flopp/go-parkrunparser v0.0.0-20250311184411-c7686d5fbafe h1:GWXLIzCj98o6GbXMZMiqSwK7oml1vbkZ3xHF37AjyIg=
+github.com/flopp/go-parkrunparser v0.0.0-20250311184411-c7686d5fbafe/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/jedib0t/go-pretty/v6 v6.5.9 h1:ACteMBRrrmm1gMsXe9PSTOClQ63IXDUt03H5U+UV8OU=
 github.com/jedib0t/go-pretty/v6 v6.5.9/go.mod h1:zbn98qrYlh95FIhwwsbIip0LYpwSG8SUOScs+v9/t0E=
 github.com/jedib0t/go-pretty/v6 v6.6.2 h1:27bLj3nRODzaiA7tPIxy9UVWHoPspFfME9XxgwiiNsM=
