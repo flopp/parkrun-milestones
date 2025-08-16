@@ -2,6 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/flopp/go-parkrunparser v0.0.0-20250816113400-68aee9aa1ab5 h1:DhJoRquRvtf3gGDaaMY2Pt43VqEvielFUVWSpEiyiyw=
 github.com/flopp/go-parkrunparser v0.0.0-20250816113400-68aee9aa1ab5/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
+github.com/flopp/go-parkrunparser v0.0.0-20250816114451-0358a14452d8 h1:pl6hFcegGVFBbHS+XXn1vwdYO5iBIwHvtNqbNNU92kU=
+github.com/flopp/go-parkrunparser v0.0.0-20250816114451-0358a14452d8/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/jedib0t/go-pretty/v6 v6.6.7 h1:m+LbHpm0aIAPLzLbMfn8dc3Ht8MW7lsSO4MPItz/Uuo=
 github.com/jedib0t/go-pretty/v6 v6.6.7/go.mod h1:YwC5CE4fJ1HFUDeivSV1r//AmANFHyqczZk+U6BDALU=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
