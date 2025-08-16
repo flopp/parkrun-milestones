@@ -28,7 +28,7 @@ func DownloadAndRead(url string, fileName string) ([]byte, time.Time, error) {
 	}
 
 	if err := download.DownloadFile(url, filePath, MaxFileAge); err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, fmt.Errorf("while downloading '%s' to '%s': %w", url, fileName, err)
 	}
 
 	buf, err := os.ReadFile(filePath)

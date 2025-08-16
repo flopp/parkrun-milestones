@@ -19,7 +19,3 @@ run-webgen:
 .PHONY: run
 run:
 	@go run cmd/runstats/main.go -fancy dietenbach
-	@echo
-	@go run cmd/people/main.go dietenbach people.html
-	@scp people.html echeclus.uberspace.de:/var/www/virtual/floppnet/freiburg.run/
-	@scp people.html echeclus.uberspace.de:/var/www/virtual/floppnet/fraig.de/
