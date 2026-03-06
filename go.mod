@@ -2,7 +2,7 @@ module github.com/flopp/parkrun-milestones
 
 go 1.22
 
-toolchain go1.26.0
+toolchain go1.26.1
 
 require (
 	github.com/flopp/go-parkrunparser v0.0.1
