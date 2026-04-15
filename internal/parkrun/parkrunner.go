@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -47,12 +48,21 @@ func updateParkrunner(parkrunners map[string]*Parkrunner, id string, name string
 }
 
 var (
-	patternR0  = regexp.MustCompile(`No results have been recorded yet for this parkrunner`)
-	patternR1  = regexp.MustCompile(`<h3>(\d+) parkruns? total</h3>`)
-	patternRJ1 = regexp.MustCompile(`<h3>(\d+) junior parkruns? total</h3>`)
-	patternR2  = regexp.MustCompile(`<h3>(\d+) parkruns? & (\d+) junior parkruns? total</h3>`)
-	patternV   = regexp.MustCompile(`<strong>Total Credits</strong></td><td><strong>(\d+)</strong>`)
+	patternNameId = regexp.MustCompile(`<h2>(.*)<span style="font-weight: normal;" title="parkrun ID">\(A(\d+)\)</span></h2>`)
+	patternR0     = regexp.MustCompile(`No results have been recorded yet for this parkrunner`)
+	patternR1     = regexp.MustCompile(`<h3>(\d+) parkruns? total</h3>`)
+	patternRJ1    = regexp.MustCompile(`<h3>(\d+) junior parkruns? total</h3>`)
+	patternR2     = regexp.MustCompile(`<h3>(\d+) parkruns? & (\d+) junior parkruns? total</h3>`)
+	patternV      = regexp.MustCompile(`<strong>Total Credits</strong></td><td><strong>(\d+)</strong>`)
 )
+
+func ExtractNameAndId(buf string) (string, string, error) {
+	match := patternNameId.FindStringSubmatch(buf)
+	if match != nil {
+		return strings.TrimSpace(match[1]), strings.TrimSpace(match[2]), nil
+	}
+	return "", "", fmt.Errorf("cannot find name and ID")
+}
 
 func ExtractRunData(buf string) (int, int, error) {
 	match := patternR1.FindStringSubmatch(buf)
@@ -106,16 +116,21 @@ func ExtractVolData(buf string) (int, error) {
 	return 0, nil
 }
 
-func ExtractData(buf string) (int, int, int, error) {
+func ExtractData(buf string) (string, string, int, int, int, error) {
+	name, id, err := ExtractNameAndId(buf)
+	if err != nil {
+		return "", "", 0, 0, 0, err
+	}
+
 	r, j, err := ExtractRunData(buf)
 	if err != nil {
-		return 0, 0, 0, err
+		return "", "", 0, 0, 0, err
 	}
 	v, err := ExtractVolData(buf)
 	if err != nil {
-		return 0, 0, 0, err
+		return "", "", 0, 0, 0, err
 	}
-	return r, j, v, nil
+	return name, id, r, j, v, nil
 }
 
 func (parkrunner *Parkrunner) NeedsUpdate() bool {
@@ -162,9 +177,18 @@ func (parkrunner *Parkrunner) FetchMissingStats(lastRunTime time.Time) error {
 		return err
 	}
 
-	r, j, v, err := ExtractData(string(buf))
+	name, id, r, j, v, err := ExtractData(string(buf))
 	if err != nil {
 		return err
+	}
+
+	if parkrunner.Id != id {
+		return fmt.Errorf("ID mismatch: expected %s, got %s", parkrunner.Id, id)
+	}
+
+	// only update name if it is not set yet
+	if parkrunner.Name == "" {
+		parkrunner.Name = name
 	}
 
 	parkrunner.update(dataTime, "??", int64(r), int64(j), int64(v))

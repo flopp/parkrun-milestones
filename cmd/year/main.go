@@ -167,15 +167,21 @@ func main() {
 	sex_unknown := 0
 
 	people := make(map[string]*parkrun.Participant, 0)
+	id_runs_at_event := make(map[string]int)
 	for _, run := range event.Runs {
-		if options.year != 0 && run.Time.Year() != options.year {
-			continue
-		}
-		runs += 1
-
 		if err := run.Complete(); err != nil {
 			panic(err)
 		}
+
+		for _, p := range run.Runners {
+			id_runs_at_event[p.Id] += 1
+		}
+
+		if options.year != 0 && run.Time.Year() != options.year {
+			continue
+		}
+
+		runs += 1
 
 		r := 0
 		v := 0
@@ -212,7 +218,9 @@ func main() {
 			} else {
 				sex_unknown += 1
 			}
+
 		}
+
 		for _, p := range run.Volunteers {
 			v += 1
 			volunteers[p.Id] += 1
@@ -360,13 +368,19 @@ func main() {
 	}
 	countryCounts := make(map[string]int)
 	guests := 0
+	isGuest := make(map[string]bool)
 	for _, count_id := range count_runners {
 		total_count, ok := id_runs[count_id.Id]
 		if !ok {
 			panic(fmt.Errorf("no total runs for %s", count_id.Id))
 		}
+		event_count, ok := id_runs_at_event[count_id.Id]
+		if !ok {
+			panic(fmt.Errorf("no event runs for %s", count_id.Id))
+		}
 
-		if count_id.Count <= total_count/4 {
+		if event_count <= total_count/4 {
+			isGuest[count_id.Id] = true
 			if options.guestCountries {
 				country, err := parkrun.GetParkrunnerCountry(count_id.Id, eventCountries)
 				if err != nil {
@@ -377,6 +391,21 @@ func main() {
 			guests += count_id.Count
 		}
 	}
+
+	fmt.Println("\nEVENT;GUESTS;PERCENTAGE")
+	for _, run := range event.Runs {
+		if options.year != 0 && run.Time.Year() != options.year {
+			continue
+		}
+		guests := 0
+		for _, p := range run.Runners {
+			if isGuest[p.Id] {
+				guests += 1
+			}
+		}
+		fmt.Printf("%s;%d;%f\n", run.Time.Format("02.01.2006"), guests, float64(guests)/float64(len(run.Runners)))
+	}
+
 	fmt.Printf("\nGUESTS:\n%d\n", guests)
 	if options.guestCountries {
 		fmt.Println("\nGUEST COUNTRIES:")
