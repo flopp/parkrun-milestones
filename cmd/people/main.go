@@ -105,7 +105,7 @@ func (p *Person) fetchMissingStats() error {
 		return err
 	}
 
-	r, j, v, err := parkrun.ExtractData(string(buf))
+	_, _, r, j, v, err := parkrun.ExtractData(string(buf))
 	if err != nil {
 		return err
 	}

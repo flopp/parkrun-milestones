@@ -7,6 +7,7 @@ build:
 	go build -o .bin/parkrun-webgen cmd/webgen/main.go
 	go build -o .bin/parkrun-year cmd/year/main.go
 	go build -o .bin/parkrun-people cmd/people/main.go
+	go build -o .bin/parkrun-person cmd/person/main.go
 
 .PHONY: vet
 vet:
