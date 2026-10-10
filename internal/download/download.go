@@ -32,18 +32,38 @@ func AlwaysDownload(url string, filePath string) error {
 		return fmt.Errorf("Non-OK HTTP status: %d", response.StatusCode)
 	}
 
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Errorf("reading response body from '%s': %w", url, err)
+	}
+	// A connection hiccup can yield a 200 with no/truncated body; refuse it
+	// rather than letting it silently overwrite a good cache entry.
+	if len(body) == 0 {
+		return fmt.Errorf("empty response body from '%s'", url)
+	}
+
 	if err := os.MkdirAll(filepath.Dir(filePath), 0770); err != nil {
 		return err
 	}
 
-	out, err := os.Create(filePath)
+	// Write to a temp file and rename into place so a failed/partial write
+	// can never leave a truncated file at filePath.
+	tmpFile, err := os.CreateTemp(filepath.Dir(filePath), filepath.Base(filePath)+".tmp*")
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath) // no-op once renamed below
 
-	_, err = io.Copy(out, response.Body)
-	return err
+	if _, err := tmpFile.Write(body); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpPath, filePath)
 }
 
 func DownloadFileMaxMtime(url string, filePath string, maxMtime time.Time) error {
