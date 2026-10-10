@@ -4,6 +4,8 @@ github.com/flopp/go-parkrunparser v0.0.0-20250816113400-68aee9aa1ab5 h1:DhJoRquR
 github.com/flopp/go-parkrunparser v0.0.0-20250816113400-68aee9aa1ab5/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/flopp/go-parkrunparser v0.0.1 h1:wDql3eofitH9Ze3pnHn50jE+XTr3cV/5/npIZX63yBw=
 github.com/flopp/go-parkrunparser v0.0.1/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
+github.com/flopp/go-parkrunparser v0.0.3 h1:bsurf3nU9oepbY8dTTATIfXS7sP3Ln1c11U65XLBxF0=
+github.com/flopp/go-parkrunparser v0.0.3/go.mod h1:9iKtIGPlok7c4yyiiLg2CSxwMXqeij4iZCMStvUzpRA=
 github.com/jedib0t/go-pretty/v6 v6.6.7 h1:m+LbHpm0aIAPLzLbMfn8dc3Ht8MW7lsSO4MPItz/Uuo=
 github.com/jedib0t/go-pretty/v6 v6.6.7/go.mod h1:YwC5CE4fJ1HFUDeivSV1r//AmANFHyqczZk+U6BDALU=
 github.com/jedib0t/go-pretty/v6 v6.7.8 h1:BVYrDy5DPBA3Qn9ICT+PokP9cvCv1KaHv2i+Hc8sr5o=
