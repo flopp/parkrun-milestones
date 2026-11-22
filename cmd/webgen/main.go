@@ -135,7 +135,7 @@ func main() {
 		parkrun.MaxFileAge = 0
 	}
 
-	t, err := template.ParseFiles("cmd/webgen/event.html")
+	t, err := template.ParseFiles("webgen/event.html")
 	if err != nil {
 		panic(err)
 	}

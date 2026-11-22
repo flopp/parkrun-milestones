@@ -12,6 +12,13 @@ Try to determine milestone candidates to the next run at a parkrun event.
 
 You can use this command to search for events (e.g. in order to find out the id of a specific event).
 
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `PATTERN` | Optional positional search text matched against event IDs and event names, case-insensitively. If omitted, all events are listed. |
+| `-force` | Reload all event data instead of using cached data (default: `false`). |
+
 Example:
 
 ```
@@ -43,6 +50,16 @@ $ ./parkrun-events east
 Determine possible milestone candidates for the next run of a given event.
 A milestone candidate is a runner or volunteer, who will probably have a milestone number of runs or volunteerings (25, 50, 100, 250, 500) at the upcoming run, and who was active (running or volunteering) in at least 30% (parameter `-active`) the last 10 runs of the event (parameter `-runs`).
 
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `EVENTID...` | One or more parkrun event IDs to examine. Cannot be combined with `-country`. |
+| `-force` | Reload all data instead of using cached data (default: `false`). |
+| `-active` | Minimum fraction of the selected recent runs in which a person must participate or volunteer. Accepts a value from `0` to `1` (default: `0.3`, or 30%). |
+| `-runs` | Maximum number of the latest event runs to examine (default: `10`). |
+| `-country` | Examine every event in the specified country instead of accepting `EVENTID...`. The country name is matched without case or surrounding whitespace. |
+
 Example:
 
 ```
@@ -68,6 +85,16 @@ $ ./parkrun-milestones eastville
 ### parkrun-runstats
 Prints the stats of the latest run in list format; suitable for sharing in text-based social media (mastodon, twitter, etc.).
 
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `EVENTID...` | One or more parkrun event IDs to report. Cannot be combined with `-country`. |
+| `-force` | Reload all data instead of using cached data (default: `false`). |
+| `-fancy` | Use fancy social-media formatting with emoji (default: `false`). |
+| `-table` | Print runner and volunteer details as semicolon-separated CSV-style text (default: `false`). This format takes precedence over `-fancy`. |
+| `-country` | Report every event in the specified country instead of accepting `EVENTID...`. The country name is matched without case or surrounding whitespace. |
+
 Example:
 
 ```
@@ -88,3 +115,52 @@ Bushy parkrun
   🏆 100. vol. anniversary: 1
 👀 https://www.parkrun.org.uk/bushy/results/902/
 ```
+
+### parkrun-webgen
+
+Generate an HTML page for one or more events, or for all events in a country.
+
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `EVENTID...` | One or more parkrun event IDs to generate pages for. Cannot be combined with `-country`. |
+| `-force` | Reload all data instead of using cached data (default: `false`). |
+| `-outdir` | Directory in which generated HTML files are written (default: `html`). The directory is created if necessary. |
+| `-country` | Generate pages for every event in the specified country instead of accepting `EVENTID...`. The country name is matched without case or surrounding whitespace. |
+
+### parkrun-year
+
+Show runner, volunteer, guest, sex, age-group, run-time, and name statistics for an event, optionally restricted to a year.
+
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `EVENTID` | Required parkrun event ID to analyse. |
+| `YEAR` | Optional four-digit year to restrict the statistics. If omitted, all available runs are included. |
+| `-force` | Reload all data instead of using cached data (default: `false`). |
+| `-guestcountries` | Determine the country of guest parkrunners. This may take some time (default: `false`). |
+
+### parkrun-people
+
+Generate an HTML list containing all runners and volunteers recorded for an event.
+
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `EVENTID` | Required parkrun event ID to analyse. |
+| `TARGETFILE` | Required output HTML file path. |
+| `-force` | Reload all data instead of using cached data (default: `false`). |
+
+### parkrun-person
+
+Fetch and print the name and total run, junior-run, and volunteer counts for a parkrunner.
+
+#### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `PARKRUNNER_ID` | Required numeric parkrunner ID. |
+| `-force` | Reload all parkrunner data instead of using cached data (default: `false`). |
